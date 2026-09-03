@@ -1,0 +1,135 @@
+const pool   = require('../config/database');
+const logger = require('../utils/logger');
+const { success, created, notFound, badRequest } = require('../utils/response');
+const { isValidDate } = require('../utils/validate');
+
+const getAntrian = async (req, res) => {
+  try {
+    const { dokter_id, status } = req.query;
+    const tanggal = req.query.tanggal || new Date().toISOString().split('T')[0];
+
+    if (!isValidDate(tanggal)) return badRequest(res, 'Format tanggal tidak valid');
+
+    const validStatus = ['menunggu', 'diperiksa', 'selesai', 'batal'];
+    if (status && !validStatus.includes(status))
+      return badRequest(res, 'Status tidak valid');
+
+    const params = [tanggal];
+    let where = 'WHERE k.tanggal=$1 AND k.deleted_at IS NULL';
+
+    if (req.user.role === 'dokter') {
+      const dr = await pool.query(
+        'SELECT id FROM dokter WHERE user_id=$1 AND deleted_at IS NULL', [req.user.id]
+      );
+      if (dr.rows.length) {
+        params.push(dr.rows[0].id);
+        where += ` AND k.dokter_id=$${params.length}`;
+      }
+    } else if (dokter_id) {
+      const dId = parseInt(dokter_id);
+      if (!isNaN(dId)) { params.push(dId); where += ` AND k.dokter_id=$${params.length}`; }
+    }
+
+    if (status) { params.push(status); where += ` AND k.status=$${params.length}`; }
+
+    const { rows } = await pool.query(
+      `SELECT k.id, k.tanggal, k.waktu_daftar, k.status, k.keluhan,
+              p.id AS pasien_id, p.no_rm, p.nama AS nama_pasien,
+              p.tanggal_lahir, p.jenis_kelamin, p.kelas,
+              d.id AS dokter_id, d.nama AS nama_dokter,
+              rm.id AS rekam_medis_id,
+              r.id AS resep_id, r.status AS status_resep
+       FROM kunjungan k
+       JOIN pasien p ON k.pasien_id = p.id
+       LEFT JOIN dokter d ON k.dokter_id = d.id
+       LEFT JOIN rekam_medis rm ON rm.kunjungan_id = k.id
+       LEFT JOIN resep r ON r.kunjungan_id = k.id AND r.deleted_at IS NULL
+       ${where} ORDER BY k.waktu_daftar ASC`,
+      params
+    );
+    return success(res, rows);
+  } catch (err) {
+    logger.error({ err, userId: req.user?.id }, 'kunjunganController.getAntrian');
+    return res.status(500).json({ success: false, message: 'Terjadi kesalahan server' });
+  }
+};
+
+const getById = async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) return badRequest(res, 'ID kunjungan tidak valid');
+
+    const { rows } = await pool.query(
+      `SELECT k.*, p.no_rm, p.nama AS nama_pasien, p.tanggal_lahir,
+              p.jenis_kelamin, p.alamat, p.kelas, d.nama AS nama_dokter
+       FROM kunjungan k
+       JOIN pasien p ON k.pasien_id = p.id
+       LEFT JOIN dokter d ON k.dokter_id = d.id
+       WHERE k.id=$1 AND k.deleted_at IS NULL`,
+      [id]
+    );
+    if (!rows.length) return notFound(res, 'Kunjungan tidak ditemukan');
+    return success(res, rows[0]);
+  } catch (err) {
+    logger.error({ err, userId: req.user?.id }, 'kunjunganController.getById');
+    return res.status(500).json({ success: false, message: 'Terjadi kesalahan server' });
+  }
+};
+
+const create = async (req, res) => {
+  try {
+    const { pasien_id, dokter_id, tanggal, keluhan, catatan_triage } = req.body;
+
+    const pId = parseInt(pasien_id);
+    if (isNaN(pId)) return badRequest(res, 'ID pasien tidak valid');
+    if (tanggal && !isValidDate(tanggal)) return badRequest(res, 'Format tanggal tidak valid');
+
+    if (!(await pool.query(
+      'SELECT id FROM pasien WHERE id=$1 AND deleted_at IS NULL', [pId]
+    )).rows.length)
+      return notFound(res, 'Pasien tidak ditemukan');
+
+    const targetDate = tanggal || new Date().toISOString().split('T')[0];
+    const dId = dokter_id ? parseInt(dokter_id) : null;
+
+    const { rows } = await pool.query(
+      `INSERT INTO kunjungan(pasien_id, dokter_id, tanggal, keluhan, catatan_triage, status)
+       VALUES($1,$2,$3,$4,$5,'menunggu') RETURNING *`,
+      [pId, dId || null, targetDate, keluhan || null, catatan_triage || null]
+    );
+    return created(res, rows[0], 'Kunjungan berhasil didaftarkan');
+  } catch (err) {
+    logger.error({ err, userId: req.user?.id }, 'kunjunganController.create');
+    return res.status(500).json({ success: false, message: 'Terjadi kesalahan server' });
+  }
+};
+
+const updateStatus = async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) return badRequest(res, 'ID kunjungan tidak valid');
+
+    const { status, dokter_id } = req.body;
+    const validStatus = ['menunggu', 'diperiksa', 'selesai', 'batal'];
+    if (!validStatus.includes(status)) return badRequest(res, 'Status tidak valid');
+
+    const sets   = ['status=$1', 'updated_at=NOW()'];
+    const params = [status];
+    if (dokter_id) {
+      const dId = parseInt(dokter_id);
+      if (!isNaN(dId)) { params.push(dId); sets.push(`dokter_id=$${params.length}`); }
+    }
+    params.push(id);
+    const { rows } = await pool.query(
+      `UPDATE kunjungan SET ${sets.join(',')} WHERE id=$${params.length} AND deleted_at IS NULL RETURNING *`,
+      params
+    );
+    if (!rows.length) return notFound(res, 'Kunjungan tidak ditemukan');
+    return success(res, rows[0], 'Status diperbarui');
+  } catch (err) {
+    logger.error({ err, userId: req.user?.id }, 'kunjunganController.updateStatus');
+    return res.status(500).json({ success: false, message: 'Terjadi kesalahan server' });
+  }
+};
+
+module.exports = { getAntrian, getById, create, updateStatus };

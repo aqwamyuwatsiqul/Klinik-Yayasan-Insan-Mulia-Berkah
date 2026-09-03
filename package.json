@@ -1,0 +1,15 @@
+{
+  "name": "klinik-sekolah",
+  "version": "1.0.0",
+  "description": "Sistem Informasi Klinik Sekolah",
+  "scripts": {
+    "install:all":  "cd backend && npm install && cd ../frontend && npm install",
+    "migrate":      "cd backend && npm run migrate",
+    "seed":         "cd backend && npm run seed",
+    "setup":        "cd backend && npm run migrate && npm run seed",
+    "dev:backend":  "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && npm run dev",
+    "start:backend":"cd backend && npm start"
+  },
+  "private": true
+}

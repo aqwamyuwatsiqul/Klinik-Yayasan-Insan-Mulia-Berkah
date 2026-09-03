@@ -1,0 +1,134 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-surface-page text-text-primary antialiased;
+    font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+    /* Mencegah teks terlalu kecil di iOS setelah rotate */
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-semibold text-primary-dark;
+  }
+
+  /* Mobile-first: pastikan semua touch target minimal 44×44px (WCAG 2.5.5) */
+  button, [role="button"], a, input[type="checkbox"], input[type="radio"] {
+    @apply min-h-[44px] min-w-[44px];
+  }
+  /* Exception: tombol inline kecil boleh lebih kecil jika ada padding cukup */
+  .btn-sm { @apply min-h-[36px]; }
+
+  /* Smooth scroll bawaan — mencegah CLS dari anchor jump */
+  html { scroll-behavior: smooth; }
+
+  /* Mencegah horizontal overflow di mobile */
+  body, #root { overflow-x: hidden; }
+
+  /* Gambar selalu responsif — tidak overflow container */
+  img, video, svg {
+    max-width: 100%;
+    height: auto;
+    /* Mencegah CLS: browser tahu dimensi sebelum gambar dimuat */
+    display: block;
+  }
+}
+
+@layer components {
+  /* ── Buttons ── */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2 rounded-[8px] text-sm font-medium
+           transition-all focus:outline-none focus:ring-2 focus:ring-offset-2
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .btn-primary {
+    @apply btn bg-primary text-white hover:bg-primary-dark focus:ring-primary;
+  }
+  .btn-outline {
+    @apply btn border border-primary text-primary bg-transparent hover:bg-primary-tint focus:ring-primary;
+  }
+  .btn-ghost {
+    @apply btn bg-primary-tint text-primary-dark hover:bg-primary/20 focus:ring-primary;
+  }
+  .btn-secondary {
+    @apply btn bg-white text-text-primary border border-border hover:bg-surface-page focus:ring-primary;
+  }
+  .btn-danger {
+    @apply btn bg-status-danger text-white hover:bg-red-700 focus:ring-status-danger;
+  }
+  .btn-success {
+    @apply btn bg-primary text-white hover:bg-primary-dark focus:ring-primary;
+  }
+  .btn-sm { @apply px-3 py-1.5 text-xs; }
+  .btn-lg { @apply px-5 py-2.5 text-base; }
+
+  /* ── Inputs ── */
+  .input {
+    @apply block w-full rounded-[8px] border border-border px-3 py-2 text-sm bg-white
+           placeholder-[#9CA3AF] text-text-primary
+           focus:border-primary focus:ring-2 focus:ring-primary/20 focus:outline-none
+           transition-colors;
+  }
+  .input-error { @apply border-status-danger focus:border-status-danger focus:ring-status-danger/20; }
+  .label       { @apply block text-sm font-medium text-text-primary mb-1; }
+
+  /* ── Cards ── */
+  .card {
+    @apply bg-white rounded-[12px] border border-border shadow-sm;
+  }
+  .card-header {
+    @apply px-6 py-4 border-b border-border flex items-center justify-between;
+  }
+  .card-body { @apply p-6; }
+
+  /* ── Badges ── */
+  .badge        { @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium; }
+  .badge-green  { @apply badge bg-status-success-bg text-primary-dark; }
+  .badge-yellow { @apply badge bg-status-warning-bg text-amber-800; }
+  .badge-red    { @apply badge bg-status-danger-bg text-red-800; }
+  .badge-blue   { @apply badge bg-status-info-bg text-blue-800; }
+  .badge-gray   { @apply badge bg-surface-page text-text-secondary; }
+
+  /* ── Table ── */
+  .table-wrapper               { @apply overflow-x-auto rounded-[12px] border border-border; }
+  table.data-table             { @apply w-full text-sm text-left; }
+  table.data-table thead       { @apply bg-primary-tint text-xs text-primary-dark uppercase tracking-wider; }
+  table.data-table th          { @apply px-4 py-3 font-semibold whitespace-nowrap; }
+  table.data-table td          { @apply px-4 py-3 border-t border-border; }
+  table.data-table tbody tr    { @apply hover:bg-primary-tint/50 transition-colors; }
+
+  /* ── Modal ── */
+  .modal-overlay { @apply fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm; }
+  .modal-box     { @apply bg-white rounded-[12px] shadow-xl w-full max-h-[90vh] overflow-y-auto; }
+  .modal-header  { @apply sticky top-0 bg-white px-6 py-4 border-b border-border flex items-center justify-between rounded-t-[12px] z-10; }
+  .modal-body    { @apply px-6 py-4; }
+  .modal-footer  { @apply sticky bottom-0 bg-white px-6 py-4 border-t border-border flex justify-end gap-3 rounded-b-[12px]; }
+
+  /* ── Sidebar ── */
+  .sidebar-link {
+    @apply flex items-center gap-3 px-3 py-2.5 rounded-[8px] text-sm font-medium
+           text-text-secondary hover:bg-surface-page hover:text-text-primary
+           transition-all cursor-pointer;
+  }
+  .sidebar-link.active {
+    @apply bg-primary-tint text-primary-dark border-l-[3px] border-primary pl-[10px];
+  }
+
+  /* ── Stat card ── */
+  .stat-icon { @apply w-12 h-12 rounded-[12px] flex items-center justify-center flex-shrink-0; }
+}
+
+/* ── Sidebar transition desktop ── */
+aside {
+  transition: transform 300ms ease, width 300ms ease;
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar       { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #F5F5F5; }
+::-webkit-scrollbar-thumb { background: #C8E6C9; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #A5D6A7; }

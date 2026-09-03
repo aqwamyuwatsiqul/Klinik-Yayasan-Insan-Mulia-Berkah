@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+
+    <!-- Viewport: mobile-first, tidak ada user-scale lock -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+
+    <!-- SEO & deskripsi -->
+    <meta name="description" content="Sistem Informasi Klinik Yayasan Insan Mulia Berkah — manajemen pasien, kunjungan, rekam medis, dan farmasi." />
+    <meta name="robots" content="noindex, nofollow" /><!-- Sistem internal, jangan diindeks -->
+
+    <!-- Security headers via meta (fallback jika server belum set) -->
+    <meta http-equiv="X-Content-Type-Options" content="nosniff" />
+    <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin" />
+
+    <title>Klinik Yayasan Insan Mulia Berkah</title>
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="/logo.png" />
+
+    <!--
+      Google Fonts — Plus Jakarta Sans
+      Strategi:
+      1. preconnect: buka koneksi ke fonts.googleapis.com sebelum CSS diminta
+      2. crossorigin pada gstatic: wajib untuk font files (cross-origin resource)
+      3. font-display=swap ditambahkan di URL agar teks tetap tampil dengan
+         fallback font saat Plus Jakarta Sans belum siap (mencegah FOIT/CLS)
+      4. <link rel="preload"> untuk weight 400 & 600 yang paling sering dipakai
+         → mempercepat LCP karena font kritis tersedia lebih awal
+    -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+
+    <!-- Preload font weight paling kritis (400 = body, 600 = heading) -->
+    <link rel="preload" as="style"
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <!--
+      Inline CSS kritis untuk mencegah FOUC (Flash of Unstyled Content).
+      Hanya properti minimal yang dibutuhkan sebelum CSS bundle selesai dimuat.
+      Ini memperbaiki CLS dan LCP karena layout sudah terbentuk dari awal.
+    -->
+    <style>
+      /* Prevent layout shift saat font belum termuat */
+      *, *::before, *::after { box-sizing: border-box; }
+      html { font-size: 14px; }
+      body {
+        margin: 0;
+        background-color: #F5F5F5;
+        font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+      /* Skeleton root agar tidak ada content shift saat JS load */
+      #root { min-height: 100vh; }
+
+      /* Loading spinner inline — tampil sebelum React mount */
+      #app-loader {
+        position: fixed; inset: 0;
+        display: flex; align-items: center; justify-content: center;
+        background: #F5F5F5; z-index: 9999;
+        transition: opacity 0.2s;
+      }
+      #app-loader.hidden { opacity: 0; pointer-events: none; }
+      .loader-ring {
+        width: 40px; height: 40px;
+        border: 3px solid #E8F5E9;
+        border-top-color: #2E7D32;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+      }
+      @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+  </head>
+  <body>
+    <!-- Inline loader: tampil instan, hilang setelah React mount -->
+    <div id="app-loader" aria-label="Memuat aplikasi...">
+      <div class="loader-ring"></div>
+    </div>
+
+    <div id="root"></div>
+
+    <script type="module" src="/src/main.jsx"></script>
+
+    <!-- Sembunyikan loader setelah React selesai mount -->
+    <script>
+      // Listener ini dieksekusi setelah DOMContentLoaded
+      // React akan menggantikan #root, loader bisa disembunyikan
+      window.addEventListener('load', function () {
+        var loader = document.getElementById('app-loader');
+        if (loader) {
+          loader.classList.add('hidden');
+          setTimeout(function () { loader.remove(); }, 300);
+        }
+      });
+    </script>
+  </body>
+</html>
