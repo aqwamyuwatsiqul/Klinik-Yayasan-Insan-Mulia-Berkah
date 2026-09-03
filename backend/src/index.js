@@ -182,6 +182,22 @@ app.get('/uploads/profil/:filename', authenticate, (req, res) => {
   res.sendFile(filePath);
 });
 
+// ── Display TV: endpoint publik antrian (tanpa auth, tanpa CSRF) ──────────
+// Harus didaftarkan SEBELUM csrfProtection agar GET tidak butuh header CSRF.
+// Rate limiter sendiri (lebih longgar dari global) karena TV polling tiap 15 det.
+const tvLimiter = rateLimit({
+  windowMs: 60 * 1000, // 1 menit
+  max     : 30,        // 30 req/menit per IP (TV poll tiap 15 det = 4 req/mnt, margin x7)
+  standardHeaders: true,
+  legacyHeaders  : false,
+  message: { success: false, message: 'Terlalu banyak permintaan' },
+});
+app.get(
+  '/api/tv/antrian',
+  tvLimiter,
+  require('./controllers/kunjunganController').getAntrianPublik
+);
+
 // ── CSRF Protection ────────────────────────────────────────────────────────
 // Semua mutasi (POST/PUT/PATCH/DELETE) wajib menyertakan header
 // X-Requested-With: XMLHttpRequest — kecuali endpoint login.

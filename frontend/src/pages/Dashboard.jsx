@@ -4,7 +4,7 @@ import { laporanAPI } from '../api';
 import Spinner from '../components/common/Spinner';
 import {
   Users, Calendar, FlaskConical, Package,
-  AlertTriangle, CheckCircle, Clock, ClipboardList,
+  AlertTriangle, CheckCircle, Clock, ClipboardList, Tv2,
 } from 'lucide-react';
 import { formatDateTime, statusKunjunganLabel } from '../utils/helpers';
 
@@ -238,6 +238,14 @@ export default function Dashboard() {
       <div className="card">
         <div className="card-header">
           <h3 className="font-semibold text-text-primary">Kunjungan terbaru hari ini</h3>
+          <button
+            onClick={() => window.open('/tv', '_blank', 'noopener,noreferrer')}
+            className="btn-primary btn-sm flex items-center gap-1.5"
+            title="Buka halaman display TV antrian di tab baru"
+          >
+            <Tv2 className="w-3.5 h-3.5" />
+            Tampilkan Display TV
+          </button>
         </div>
         {!data?.kunjungan_terbaru?.length ? (
           <div className="card-body text-center text-sm text-text-secondary py-10">

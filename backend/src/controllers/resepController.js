@@ -168,16 +168,14 @@ const konfirmasi = async (req, res) => {
             new Error(`Stok ${obat.nama} tidak cukup (tersisa: ${obat.stok})`),
             { statusCode: 400 }
           );
-      }
-
-      for (const item of items) {
-        const { stok } = (await client.query('SELECT stok FROM obat WHERE id=$1', [item.obat_id])).rows[0];
-        const stokSesudah = stok - item.jumlah;
+        // nilai stok sudah kita punya dari SELECT FOR UPDATE di atas —
+        // tidak perlu SELECT ulang sebelum UPDATE (hemat 1 query/item)
+        const stokSesudah = obat.stok - item.jumlah;
         await client.query('UPDATE obat SET stok=$1 WHERE id=$2', [stokSesudah, item.obat_id]);
         await client.query(
           `INSERT INTO stok_log(obat_id,tipe,jumlah,stok_sebelum,stok_sesudah,referensi_id,referensi_tipe,keterangan,user_id)
            VALUES($1,'keluar',$2,$3,$4,$5,'resep','Penyerahan resep',$6)`,
-          [item.obat_id, item.jumlah, stok, stokSesudah, resepId, req.user.id]
+          [item.obat_id, item.jumlah, obat.stok, stokSesudah, resepId, req.user.id]
         );
       }
 

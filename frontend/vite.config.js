@@ -20,7 +20,8 @@ export default defineConfig({
   plugins: [react()],
 
   server: {
-    port: 5173,
+    port      : 5173,
+    strictPort: true,   // Gagal dengan pesan jelas jika port sudah dipakai, tidak pindah diam-diam ke 5174
     proxy: {
       '/api'    : { target: 'http://localhost:5000', changeOrigin: true },
       '/uploads': { target: 'http://localhost:5000', changeOrigin: true },

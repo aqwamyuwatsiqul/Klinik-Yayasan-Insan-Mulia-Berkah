@@ -16,8 +16,9 @@ import MainLayout from './components/layout/MainLayout';
 
 // ── Halaman kritis: load segera (tidak lazy) ──────────────────────────────
 // Login & Dashboard adalah halaman pertama yang dilihat user.
-import Login     from './pages/Login';
-import Dashboard from './pages/Dashboard';
+import Login      from './pages/Login';
+import Dashboard  from './pages/Dashboard';
+import DisplayTV  from './pages/DisplayTV';
 
 // ── Lazy load semua halaman lainnya ───────────────────────────────────────
 // Setiap halaman ini menjadi chunk JS terpisah.
@@ -124,6 +125,7 @@ export default function App() {
             <Routes>
               {/* Public */}
               <Route path="/login" element={<Login />} />
+              <Route path="/tv"    element={<DisplayTV />} />
 
               {/* Protected */}
               <Route element={<MainLayout />}>

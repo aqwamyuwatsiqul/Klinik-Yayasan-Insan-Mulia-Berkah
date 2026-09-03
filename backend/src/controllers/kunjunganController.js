@@ -133,3 +133,49 @@ const updateStatus = async (req, res) => {
 };
 
 module.exports = { getAntrian, getById, create, updateStatus };
+
+// ── Display TV: antrian publik hari ini (tanpa auth) ──────────────────────
+// Endpoint ini sengaja tidak memerlukan JWT karena diakses dari TV/layar
+// umum di ruang tunggu yang tidak punya session login.
+// Data yang dikembalikan minimal — tidak ada data medis sensitif:
+// hanya nomor antrian, nama pasien, nama dokter, dan status.
+const getAntrianPublik = async (req, res) => {
+  try {
+    const today = new Date().toISOString().split('T')[0];
+
+    const { rows } = await pool.query(
+      `SELECT
+         ROW_NUMBER() OVER (ORDER BY k.waktu_daftar ASC) AS nomor_antrian,
+         k.id,
+         k.status,
+         k.waktu_daftar,
+         p.nama  AS nama_pasien,
+         p.kelas,
+         d.nama  AS nama_dokter,
+         d.spesialisasi
+       FROM kunjungan k
+       JOIN pasien p ON k.pasien_id = p.id
+       LEFT JOIN dokter d ON k.dokter_id = d.id
+       WHERE k.tanggal = $1
+         AND k.deleted_at IS NULL
+         AND k.status IN ('menunggu', 'diperiksa', 'selesai')
+       ORDER BY k.waktu_daftar ASC`,
+      [today]
+    );
+
+    // Hitung ringkasan
+    const summary = {
+      menunggu:  rows.filter((r) => r.status === 'menunggu').length,
+      diperiksa: rows.filter((r) => r.status === 'diperiksa').length,
+      selesai:   rows.filter((r) => r.status === 'selesai').length,
+      total:     rows.length,
+    };
+
+    return success(res, { summary, antrian: rows });
+  } catch (err) {
+    logger.error({ err }, 'kunjunganController.getAntrianPublik');
+    return res.status(500).json({ success: false, message: 'Terjadi kesalahan server' });
+  }
+};
+
+module.exports = { getAntrian, getById, create, updateStatus, getAntrianPublik };

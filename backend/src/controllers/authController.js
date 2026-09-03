@@ -35,12 +35,12 @@ const login = async (req, res) => {
     // C3 FIX: dua query terpisah, tidak ada string interpolation pada nama kolom
     const { rows } = isEmail
       ? await pool.query(
-          `SELECT id, nama, username, password, role, aktif, email
+          `SELECT id, nama, username, password, role, aktif, email, foto_profil
            FROM users WHERE LOWER(email) = $1 AND deleted_at IS NULL`,
           [normalizedInput]
         )
       : await pool.query(
-          `SELECT id, nama, username, password, role, aktif, email
+          `SELECT id, nama, username, password, role, aktif, email, foto_profil
            FROM users WHERE username = $1 AND deleted_at IS NULL`,
           [normalizedInput]
         );
@@ -74,7 +74,7 @@ const login = async (req, res) => {
     logger.info({ userId: user.id, role: user.role }, 'Login berhasil');
     return success(res, {
       token,
-      user: { id: user.id, nama: user.nama, username: user.username, role: user.role, email: user.email, dokter },
+      user: { id: user.id, nama: user.nama, username: user.username, role: user.role, email: user.email, foto_profil: user.foto_profil ?? null, dokter },
     }, 'Login berhasil');
   } catch (err) {
     logger.error({ err }, 'authController.login');
@@ -158,7 +158,7 @@ const updateProfile = async (req, res) => {
     const { rows } = await pool.query(
       `UPDATE users SET nama=$1, email=$2
        WHERE id=$3 AND deleted_at IS NULL
-       RETURNING id, nama, username, role, email`,
+       RETURNING id, nama, username, role, email, foto_profil`,
       [nama.trim(), email || null, req.user.id]
     );
     if (!rows.length) return unauthorized(res, 'User tidak ditemukan');

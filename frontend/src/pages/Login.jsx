@@ -56,11 +56,17 @@ export default function Login() {
 
         {/* Logo asli Yayasan — atas */}
         <div className="relative z-10">
-          <img
-            src="/logo.png"
-            alt="Logo Yayasan Insan Mulia Berkah"
-            className="w-40 h-40 object-contain drop-shadow-lg"
-          />
+          <picture>
+            <source srcSet="/logo.webp" type="image/webp" />
+            <img
+              src="/logo-fallback.png"
+              alt="Logo Yayasan Insan Mulia Berkah"
+              width="160"
+              height="160"
+              fetchpriority="high"
+              className="w-40 h-40 object-contain drop-shadow-lg"
+            />
+          </picture>
         </div>
 
         {/* Teks tengah */}
@@ -106,11 +112,16 @@ export default function Login() {
 
           {/* Logo untuk mobile (hanya tampil saat layar kecil) */}
           <div className="flex lg:hidden items-center gap-3 mb-8">
-            <img
-              src="/logo.png"
-              alt="Logo Yayasan Insan Mulia Berkah"
-              className="w-12 h-12 object-contain"
-            />
+            <picture>
+              <source srcSet="/logo.webp" type="image/webp" />
+              <img
+                src="/logo-fallback.png"
+                alt="Logo Yayasan Insan Mulia Berkah"
+                width="48"
+                height="48"
+                className="w-12 h-12 object-contain"
+              />
+            </picture>
             <div>
               <p className="font-bold text-primary-dark text-sm leading-tight">
                 Yayasan Insan Mulia Berkah

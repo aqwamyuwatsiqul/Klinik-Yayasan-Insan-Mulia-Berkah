@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNotifikasi } from '../../hooks/useNotifikasi';
+import useAuthedImage from '../../hooks/useAuthedImage';
 import {
   PanelLeftClose, PanelLeftOpen,
   UserCircle, Settings, LogOut, ChevronDown,
@@ -181,15 +182,17 @@ function ProfileDropdown({ user, onLogout }) {
 
   const go = (path) => { setOpen(false); navigate(path); };
 
-  // Avatar — foto atau inisial
-  const avatarUrl = user?.foto_profil
-    ? `/uploads/profil/${user.foto_profil}`
-    : null;
+  // Avatar — foto atau inisial (fetch via axios agar Authorization header ikut)
+  const avatarUrl = useAuthedImage(
+    user?.foto_profil ? `/uploads/profil/${user.foto_profil}` : null,
+  );
 
   const AvatarSm = () => avatarUrl ? (
     <img
       src={avatarUrl}
       alt={user?.nama}
+      width="28"
+      height="28"
       className="w-7 h-7 rounded-full object-cover flex-shrink-0 border border-border"
     />
   ) : (
@@ -203,6 +206,8 @@ function ProfileDropdown({ user, onLogout }) {
     <img
       src={avatarUrl}
       alt={user?.nama}
+      width="40"
+      height="40"
       className="w-10 h-10 rounded-full object-cover flex-shrink-0 border-2 border-primary/20"
     />
   ) : (

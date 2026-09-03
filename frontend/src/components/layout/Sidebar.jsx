@@ -1,5 +1,6 @@
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import useAuthedImage from '../../hooks/useAuthedImage';
 import {
   LayoutDashboard, Users, UserCog, Stethoscope, ClipboardList,
   FlaskConical, Package, FileBarChart, History,
@@ -30,11 +31,17 @@ const NAV = {
 };
 
 function Avatar({ user }) {
-  if (user?.foto_profil) {
+  const photoUrl = useAuthedImage(
+    user?.foto_profil ? `/uploads/profil/${user.foto_profil}` : null,
+  );
+
+  if (photoUrl) {
     return (
       <img
-        src={`/uploads/profil/${user.foto_profil}`}
+        src={photoUrl}
         alt={user.nama}
+        width="32"
+        height="32"
         className="w-8 h-8 rounded-full object-cover border border-border flex-shrink-0"
       />
     );
@@ -73,8 +80,10 @@ export default function Sidebar({ open, sidebarW, onClose }) {
                     ${collapsed ? 'justify-center px-2 py-4' : 'gap-3 px-4 py-4'}`}
       >
         <img
-          src="/logo.png"
+          src="/logo.webp"
           alt="Logo Yayasan"
+          width="36"
+          height="36"
           className="w-9 h-9 object-contain rounded-[8px] flex-shrink-0"
         />
         {!collapsed && (

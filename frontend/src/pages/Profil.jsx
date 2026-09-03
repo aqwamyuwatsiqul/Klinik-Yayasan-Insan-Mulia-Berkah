@@ -6,6 +6,7 @@ import { getErrorMessage, roleLabel } from '../utils/helpers';
 import { UserCircle, Mail, ShieldCheck, BadgeCheck, Camera, Loader2 } from 'lucide-react';
 import Spinner from '../components/common/Spinner';
 import toast from 'react-hot-toast';
+import useAuthedImage, { invalidateAuthedImage } from '../hooks/useAuthedImage';
 
 // ── Avatar dengan tombol upload ──────────────────────────────────────────
 function AvatarUpload({ user, onUploaded }) {
@@ -13,8 +14,10 @@ function AvatarUpload({ user, onUploaded }) {
   const [preview,   setPreview  ] = useState(null);
   const inputRef = useRef(null);
 
-  const avatarUrl = preview
-    || (user?.foto_profil ? `/uploads/profil/${user.foto_profil}` : null);
+  const persistedUrl = useAuthedImage(
+    user?.foto_profil ? `/uploads/profil/${user.foto_profil}` : null,
+  );
+  const avatarUrl = preview || persistedUrl;
 
   const handleFileChange = async (e) => {
     const file = e.target.files?.[0];
@@ -43,10 +46,21 @@ function AvatarUpload({ user, onUploaded }) {
       form.append('foto', file);
       const res     = await authAPI.uploadFotoProfil(form);
       const updated = res.data.data;
+      // Hapus cache blob lama sebelum update context — hook akan fetch ulang
+      // dengan path baru (safeName berubah tiap upload, tapi tetap invalidasi
+      // path lama agar tidak ada entry orphan di cache)
+      if (user?.foto_profil) {
+        invalidateAuthedImage(`/uploads/profil/${user.foto_profil}`);
+      }
+      // Reset preview — dari sini avatarUrl akan pakai URL server yang baru
+      // (bukan object URL lokal yang akan expired setelah di-revoke)
+      URL.revokeObjectURL(objectUrl);
+      setPreview(null);
       onUploaded(updated);
       toast.success('Foto profil berhasil diperbarui');
     } catch (err) {
       toast.error(getErrorMessage(err));
+      URL.revokeObjectURL(objectUrl);
       setPreview(null);
     } finally {
       setUploading(false);

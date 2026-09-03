@@ -17,7 +17,11 @@
     <title>Klinik Yayasan Insan Mulia Berkah</title>
 
     <!-- Favicon -->
-    <link rel="icon" type="image/png" href="/logo.png" />
+    <link rel="icon" type="image/png" href="/favicon-64.png" />
+
+    <!-- Preload logo WebP — elemen LCP di halaman Login, dan dipakai di
+         Sidebar/Topbar di setiap halaman setelah login. 14KB, prioritas tinggi. -->
+    <link rel="preload" as="image" href="/logo.webp" type="image/webp" fetchpriority="high" />
 
     <!--
       Google Fonts — Plus Jakarta Sans
