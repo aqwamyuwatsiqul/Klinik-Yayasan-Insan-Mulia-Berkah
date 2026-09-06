@@ -3,7 +3,8 @@ const c = require('../controllers/userController');
 const { authenticate, authorize } = require('../middleware/auth');
 const { validateUserCreate, validateUserUpdate } = require('../utils/validate');
 
-router.use(authenticate, authorize('admin'));
+// Manajemen user adalah wewenang owner
+router.use(authenticate, authorize('owner'));
 router.get('/',                    c.getAll);
 router.get('/:id',                 c.getById);
 router.post('/',                   validateUserCreate, c.create);

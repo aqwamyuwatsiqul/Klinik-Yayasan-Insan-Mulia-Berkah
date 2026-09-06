@@ -4,13 +4,13 @@ const { authenticate, authorize } = require('../middleware/auth');
 
 router.use(authenticate);
 
-// getByKunjungan: dokter & admin saja
-router.get('/kunjungan/:kunjunganId', authorize('dokter', 'admin'), c.getByKunjungan);
+// GET: dokter (hanya milik sendiri, dicek di controller) + admin & owner (bisa lihat semua)
+router.get('/kunjungan/:kunjunganId', authorize('dokter', 'admin', 'owner'), c.getByKunjungan);
+router.get('/pasien/:pasienId',       authorize('dokter', 'admin', 'owner'), c.getByPasien);
 
-// getByPasien: dokter & admin saja — apoteker diblokir di route DAN di controller (defense-in-depth)
-router.get('/pasien/:pasienId',       authorize('dokter', 'admin'), c.getByPasien);
-
-router.post('/',   authorize('dokter', 'admin'), c.create);
-router.put('/:id', authorize('dokter', 'admin'), c.update);
+// POST & PUT: hanya dokter yang boleh membuat dan mengubah rekam medis
+// Admin dan owner bukan tenaga medis — hanya boleh melihat, tidak mengubah
+router.post('/',   authorize('dokter'), c.create);
+router.put('/:id', authorize('dokter'), c.update);
 
 module.exports = router;

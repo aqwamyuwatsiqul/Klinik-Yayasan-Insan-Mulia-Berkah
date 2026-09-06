@@ -23,6 +23,7 @@ const getByKunjungan = async (req, res) => {
     if (!rows.length) return notFound(res, 'Rekam medis belum diisi');
 
     // Dokter hanya boleh melihat rekam medis yang ditangani sendiri
+    // Owner dan admin boleh melihat semua
     if (req.user.role === 'dokter') {
       const dr = (await pool.query(
         'SELECT id FROM dokter WHERE user_id=$1 AND deleted_at IS NULL', [req.user.id]
@@ -43,9 +44,10 @@ const getByKunjungan = async (req, res) => {
 // Apoteker diblokir — tidak perlu melihat diagnosa/catatan klinis lengkap.
 const getByPasien = async (req, res) => {
   try {
-    // Blokir apoteker di level controller (defense-in-depth)
-    if (req.user.role === 'apoteker')
-      return forbidden(res, 'Apoteker tidak berhak mengakses rekam medis pasien');
+    // Blokir role non-medis di level controller (defense-in-depth)
+    // apoteker dan kasir tidak berhak mengakses rekam medis klinis
+    if (req.user.role === 'apoteker' || req.user.role === 'kasir')
+      return forbidden(res, 'Role Anda tidak berhak mengakses rekam medis pasien');
 
     const pasienId = parseInt(req.params.pasienId);
     if (isNaN(pasienId)) return badRequest(res, 'ID pasien tidak valid');
@@ -66,6 +68,7 @@ const getByPasien = async (req, res) => {
       if (!check)
         return forbidden(res, 'Akses ditolak. Anda tidak memiliki rekam medis untuk pasien ini.');
     }
+    // admin dan owner tidak dibatasi per-dokter — bisa lihat semua riwayat pasien
 
     const pg = parsePagination(req.query);
 

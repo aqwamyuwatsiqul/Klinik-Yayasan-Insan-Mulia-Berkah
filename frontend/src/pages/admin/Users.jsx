@@ -12,9 +12,11 @@ import { Plus, Pencil, Trash2, KeyRound, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const roleBadge = {
+  owner:    'badge-yellow',
   admin:    'badge-red',
   dokter:   'badge-blue',
   apoteker: 'badge-green',
+  kasir:    'badge-gray',
 };
 
 function UserModal({ open, onClose, initial }) {
@@ -87,9 +89,11 @@ function UserModal({ open, onClose, initial }) {
                 <label className="label">Role *</label>
                 <select className="input" {...register('role', { required: 'Wajib dipilih' })}>
                   <option value="">-- Pilih role --</option>
+                  <option value="owner">Owner</option>
                   <option value="admin">Admin</option>
                   <option value="dokter">Dokter</option>
                   <option value="apoteker">Apoteker</option>
+                  <option value="kasir">Kasir</option>
                 </select>
               </div>
             </div>

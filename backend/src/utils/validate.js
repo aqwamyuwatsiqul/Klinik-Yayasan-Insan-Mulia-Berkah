@@ -33,7 +33,7 @@ const validatePasien = (req, res, next) => {
 /** Middleware validasi body user (create) */
 const validateUserCreate = (req, res, next) => {
   const { nama, username, password, role } = req.body;
-  const validRoles = ['admin', 'dokter', 'apoteker'];
+  const validRoles = ['admin', 'dokter', 'apoteker', 'owner', 'kasir'];
 
   // FIX #4: tolak tipe non-primitif sebelum String() bisa menghasilkan "[object Object]"
   if (typeof username !== 'string' && typeof username !== 'number')
@@ -46,7 +46,7 @@ const validateUserCreate = (req, res, next) => {
   if (!/^[a-zA-Z0-9_]+$/.test(String(username)))
     return badRequest(res, 'Username hanya boleh huruf, angka, dan underscore');
   if (!validRoles.includes(role))
-    return badRequest(res, 'Role tidak valid. Pilih: admin, dokter, atau apoteker');
+    return badRequest(res, 'Role tidak valid. Pilih: admin, dokter, apoteker, owner, atau kasir');
   if (!password || password.length < 8)
     return badRequest(res, 'Password minimal 8 karakter');
   next();
@@ -55,7 +55,7 @@ const validateUserCreate = (req, res, next) => {
 /** Middleware validasi body user (update) */
 const validateUserUpdate = (req, res, next) => {
   const { nama, role } = req.body;
-  const validRoles = ['admin', 'dokter', 'apoteker'];
+  const validRoles = ['admin', 'dokter', 'apoteker', 'owner', 'kasir'];
   const err = requireString(nama, 'Nama', 2, 200);
   if (err) return badRequest(res, err);
   if (role && !validRoles.includes(role))

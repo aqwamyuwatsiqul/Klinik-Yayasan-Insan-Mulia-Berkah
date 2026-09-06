@@ -9,13 +9,22 @@ import {
 const ICON_W = 64;
 
 const NAV = {
+  owner: [
+    { to: '/dashboard',      Icon: LayoutDashboard, label: 'Dashboard'      },
+    { to: '/dokter',         Icon: Stethoscope,     label: 'Data dokter'    },
+    { to: '/users',          Icon: UserCog,         label: 'Manajemen user' },
+    { to: '/laporan',        Icon: FileBarChart,    label: 'Laporan'        },
+    { to: '/antrian',        Icon: ClipboardList,   label: 'Antrian pasien' },
+    { to: '/pasien-riwayat', Icon: History,         label: 'Riwayat pasien' },
+    { to: '/pasien',         Icon: Users,           label: 'Data pasien'    },
+  ],
   admin: [
     { to: '/dashboard', Icon: LayoutDashboard, label: 'Dashboard'      },
     { to: '/pasien',    Icon: Users,            label: 'Data pasien'    },
-    { to: '/dokter',    Icon: Stethoscope,      label: 'Data dokter'    },
     { to: '/kunjungan', Icon: ClipboardList,    label: 'Kunjungan'      },
-    { to: '/users',     Icon: UserCog,          label: 'Manajemen user' },
     { to: '/laporan',   Icon: FileBarChart,     label: 'Laporan'        },
+    { to: '/antrian-resep', Icon: FlaskConical, label: 'Antrian resep'  },
+    { to: '/obat',      Icon: Package,          label: 'Data obat'      },
   ],
   dokter: [
     { to: '/dashboard',      Icon: LayoutDashboard, label: 'Dashboard'      },
@@ -27,6 +36,9 @@ const NAV = {
     { to: '/dashboard',     Icon: LayoutDashboard, label: 'Dashboard'     },
     { to: '/antrian-resep', Icon: FlaskConical,    label: 'Antrian resep' },
     { to: '/obat',          Icon: Package,         label: 'Data obat'     },
+  ],
+  kasir: [
+    { to: '/dashboard', Icon: LayoutDashboard, label: 'Dashboard' },
   ],
 };
 

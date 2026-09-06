@@ -11,7 +11,7 @@ const getAll = async (req, res) => {
     const search = (req.query.search || '').trim();
     const role   = req.query.role || '';
 
-    const validRoles = ['admin', 'dokter', 'apoteker'];
+    const validRoles = ['admin', 'dokter', 'apoteker', 'owner', 'kasir'];
     if (role && !validRoles.includes(role))
       return badRequest(res, 'Role filter tidak valid');
 
@@ -106,7 +106,7 @@ const update = async (req, res) => {
     if (isNaN(id)) return badRequest(res, 'ID user tidak valid');
 
     const { nama, email, role, aktif } = req.body;
-    const validRoles = ['admin', 'dokter', 'apoteker'];
+    const validRoles = ['admin', 'dokter', 'apoteker', 'owner', 'kasir'];
 
     if (!nama || !nama.trim()) return badRequest(res, 'Nama wajib diisi');
     if (role && !validRoles.includes(role)) return badRequest(res, 'Role tidak valid');

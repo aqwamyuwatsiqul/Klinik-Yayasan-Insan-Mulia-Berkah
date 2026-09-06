@@ -26,12 +26,14 @@ import DisplayTV  from './pages/DisplayTV';
 const Profil        = lazy(() => import('./pages/Profil'));
 const Pengaturan    = lazy(() => import('./pages/Pengaturan'));
 
-// Admin — hanya admin yang butuh ini
-const Pasien        = lazy(() => import('./pages/admin/Pasien'));
+// Owner — kelola master data & laporan
 const Dokter        = lazy(() => import('./pages/admin/Dokter'));
 const Users         = lazy(() => import('./pages/admin/Users'));
-const Kunjungan     = lazy(() => import('./pages/admin/Kunjungan'));
 const Laporan       = lazy(() => import('./pages/admin/Laporan')); // berat karena jsPDF
+
+// Admin — operasional harian
+const Pasien        = lazy(() => import('./pages/admin/Pasien'));
+const Kunjungan     = lazy(() => import('./pages/admin/Kunjungan'));
 
 // Dokter
 const AntrianDokter = lazy(() => import('./pages/dokter/Antrian'));
@@ -98,7 +100,7 @@ function RoleGuard({ roles, children }) {
             Anda tidak memiliki izin untuk mengakses halaman ini. Halaman ini hanya tersedia untuk:{' '}
             <span className="font-semibold text-text-primary">
               {roles.map((r) =>
-                ({ admin: 'Admin', dokter: 'Dokter', apoteker: 'Apoteker' }[r] || r)
+                ({ admin: 'Admin', dokter: 'Dokter', apoteker: 'Apoteker', owner: 'Owner', kasir: 'Kasir' }[r] || r)
               ).join(', ')}
             </span>.
           </p>
@@ -134,22 +136,24 @@ export default function App() {
                 <Route path="/profil"     element={<Profil />} />
                 <Route path="/pengaturan" element={<Pengaturan />} />
 
-                {/* Semua role */}
+                {/* Semua role authenticated */}
                 <Route path="/pasien" element={
-                  <RoleGuard roles={['admin', 'dokter', 'apoteker']}>
+                  <RoleGuard roles={['admin', 'dokter', 'apoteker', 'owner']}>
                     <Pasien />
                   </RoleGuard>
                 } />
 
-                {/* Admin */}
-                <Route path="/dokter"    element={<RoleGuard roles={['admin']}><Dokter /></RoleGuard>} />
+                {/* Owner — master data & laporan */}
+                <Route path="/dokter"    element={<RoleGuard roles={['owner']}><Dokter /></RoleGuard>} />
+                <Route path="/users"     element={<RoleGuard roles={['owner']}><Users /></RoleGuard>} />
+                <Route path="/laporan"   element={<RoleGuard roles={['admin', 'owner']}><Laporan /></RoleGuard>} />
+
+                {/* Admin — operasional harian */}
                 <Route path="/kunjungan" element={<RoleGuard roles={['admin']}><Kunjungan /></RoleGuard>} />
-                <Route path="/users"     element={<RoleGuard roles={['admin']}><Users /></RoleGuard>} />
-                <Route path="/laporan"   element={<RoleGuard roles={['admin']}><Laporan /></RoleGuard>} />
 
                 {/* Dokter */}
-                <Route path="/antrian"        element={<RoleGuard roles={['dokter', 'admin']}><AntrianDokter /></RoleGuard>} />
-                <Route path="/pasien-riwayat" element={<RoleGuard roles={['dokter', 'admin']}><RiwayatPasien /></RoleGuard>} />
+                <Route path="/antrian"        element={<RoleGuard roles={['dokter', 'owner']}><AntrianDokter /></RoleGuard>} />
+                <Route path="/pasien-riwayat" element={<RoleGuard roles={['dokter', 'owner']}><RiwayatPasien /></RoleGuard>} />
 
                 {/* Apoteker */}
                 <Route path="/antrian-resep" element={<RoleGuard roles={['apoteker', 'admin']}><AntrianResep /></RoleGuard>} />

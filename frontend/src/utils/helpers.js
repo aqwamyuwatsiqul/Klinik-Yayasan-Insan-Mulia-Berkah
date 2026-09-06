@@ -72,7 +72,7 @@ export const statusResepLabel = (s) =>
 
 // ── Role label ─────────────────────────────────────────────────────────────
 export const roleLabel = (r) =>
-  ({ admin: 'Admin', dokter: 'Dokter', apoteker: 'Apoteker' }[r] || r || '-');
+  ({ admin: 'Admin', dokter: 'Dokter', apoteker: 'Apoteker', owner: 'Owner', kasir: 'Kasir' }[r] || r || '-');
 
 // ── Error message extractor ────────────────────────────────────────────────
 export const getErrorMessage = (e) =>
