@@ -82,7 +82,16 @@ const getPreviewTagihan = async (req, res) => {
       [kunjunganId]
     )).rows;
 
-    return success(res, { kunjungan: kj, item_obat: itemObat });
+    // Tarif yang sudah dipilih dokter saat menutup kunjungan
+    const tarifDisarankan = (await pool.query(
+      `SELECT tl.id, tl.nama, tl.harga
+       FROM kunjungan_tarif kt
+       JOIN tarif_layanan tl ON kt.tarif_id = tl.id
+       WHERE kt.kunjungan_id = $1`,
+      [kunjunganId]
+    )).rows;
+
+    return success(res, { kunjungan: kj, item_obat: itemObat, tarif_disarankan: tarifDisarankan });
   } catch (err) {
     logger.error({ err, userId: req.user?.id }, 'pembayaranController.getPreviewTagihan');
     return res.status(500).json({ success: false, message: 'Terjadi kesalahan server' });
@@ -168,19 +177,22 @@ const proses = async (req, res) => {
         [kunjunganId]
       )).rows;
 
-      // Kumpulkan item tarif layanan
+      // Kumpulkan item tarif layanan — deduplikasi ID terlebih dahulu
+      // agar tarif yang sama tidak tertagih dua kali meski dikirim duplikat
+      const uniqueTarifIds = [...new Set(tarif_ids.map(t => parseInt(t)))];
       const itemTarif = [];
-      for (const tid of tarif_ids) {
+      for (const tid of uniqueTarifIds) {
         const tarif = (await client.query(
           'SELECT id, nama, harga FROM tarif_layanan WHERE id=$1 AND aktif=TRUE AND deleted_at IS NULL',
           [parseInt(tid)]
         )).rows[0];
         if (!tarif)
           throw Object.assign(new Error(`Tarif ID ${tid} tidak ditemukan atau tidak aktif`), { statusCode: 400 });
-        itemTarif.push({ referensi_id: tarif.id, nama: tarif.nama, harga_satuan: tarif.harga, jumlah: 1, subtotal: tarif.harga });
+        itemTarif.push({ referensi_id: tarif.id, nama: tarif.nama, harga_satuan: tarif.harga, jumlah: 1, subtotal: tarif.harga, jenis: 'tarif' });
       }
 
-      const semuaItem = [...itemTarif, ...itemObat];
+      const itemObatBertanda = itemObat.map(i => ({ ...i, jenis: 'obat' }));
+      const semuaItem = [...itemTarif, ...itemObatBertanda];
       const totalTagihan = semuaItem.reduce((sum, i) => sum + parseFloat(i.subtotal), 0);
 
       // Validasi nominal bayar (tunai: harus >= total; lainnya tidak wajib input uang)
@@ -209,9 +221,7 @@ const proses = async (req, res) => {
         await client.query(
           `INSERT INTO pembayaran_item(pembayaran_id, jenis, referensi_id, nama, harga_satuan, jumlah, subtotal)
            VALUES($1,$2,$3,$4,$5,$6,$7)`,
-          [pb.id,
-           item.referensi_id && itemTarif.find(t => t.referensi_id === item.referensi_id) ? 'tarif' : 'obat',
-           item.referensi_id, item.nama, item.harga_satuan, item.jumlah, item.subtotal]
+          [pb.id, item.jenis, item.referensi_id, item.nama, item.harga_satuan, item.jumlah, item.subtotal]
         );
       }
 
@@ -301,7 +311,7 @@ const getRiwayat = async (req, res) => {
     const pg = parsePagination(req.query);
     const { tanggal_awal, tanggal_akhir, status, metode_bayar } = req.query;
 
-    const conditions = ['pb.waktu_bayar IS NOT NULL OR pb.status=\'void\''];
+    const conditions = ["(pb.waktu_bayar IS NOT NULL OR pb.status='void')"];
     const params     = [];
 
     if (tanggal_awal) {

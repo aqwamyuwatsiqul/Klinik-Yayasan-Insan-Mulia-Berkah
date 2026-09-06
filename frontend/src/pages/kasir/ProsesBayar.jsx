@@ -24,6 +24,13 @@ export default function ProsesBayar() {
     retry: false,
   });
 
+  // Auto-fill tarif yang sudah dipilih dokter begitu preview dimuat
+  useEffect(() => {
+    if (preview?.tarif_disarankan?.length && tarifDipilih.length === 0) {
+      setTarifDipilih(preview.tarif_disarankan);
+    }
+  }, [preview]);
+
   // Daftar tarif aktif untuk dipilih
   const { data: tarifList } = useQuery({
     queryKey: ['tarif-select'],

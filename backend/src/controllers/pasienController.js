@@ -133,9 +133,9 @@ const update = async (req, res) => {
     if (tanggal_lahir && !isValidDate(tanggal_lahir))
       return badRequest(res, 'Format tanggal lahir tidak valid');
 
-    // Ambil nilai lama untuk diff identitas sensitif
+    // Ambil nilai lama untuk diff identitas sensitif + fallback jenis_pasien
     const sebelum = (await pool.query(
-      'SELECT nik, tanggal_lahir FROM pasien WHERE id=$1 AND deleted_at IS NULL', [id]
+      'SELECT nik, tanggal_lahir, jenis_pasien FROM pasien WHERE id=$1 AND deleted_at IS NULL', [id]
     )).rows[0];
     if (!sebelum) return notFound(res, 'Pasien tidak ditemukan');
 
@@ -151,7 +151,7 @@ const update = async (req, res) => {
       [
         nama.trim(), tanggal_lahir || null, jenis_kelamin || null,
         alamat || null, no_telepon || null, kelas || null, keterangan || null,
-        jenis_pasien || 'siswa',
+        jenis_pasien !== undefined ? jenis_pasien : sebelum.jenis_pasien,
         nis || null, nik || null,
         nama_wali || null, telepon_wali || null, hubungan_wali || null,
         alergi || null, kondisi_khusus || null,

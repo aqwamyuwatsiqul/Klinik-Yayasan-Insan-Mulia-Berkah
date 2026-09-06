@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
 import { pembayaranAPI } from '../../api';
 import { formatDateTime, formatCurrency } from '../../utils/helpers';
 import EmptyState from '../../components/common/EmptyState';
@@ -10,6 +11,7 @@ import dayjs from 'dayjs';
 
 export default function AntrianKasir() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const tanggal  = dayjs().format('YYYY-MM-DD');
 
   const { data, isLoading, refetch, isFetching } = useQuery({
@@ -81,12 +83,14 @@ export default function AntrianKasir() {
                       {k.total_tagihan ? formatCurrency(k.total_tagihan) : <span className="text-text-secondary text-xs">Belum dihitung</span>}
                     </td>
                     <td>
-                      <button
-                        onClick={() => navigate(`/kasir/proses/${k.kunjungan_id}`)}
-                        className="btn-primary btn-sm"
-                      >
-                        <CreditCard className="w-3.5 h-3.5" /> Proses
-                      </button>
+                      {user?.role !== 'owner' && (
+                        <button
+                          onClick={() => navigate(`/kasir/proses/${k.kunjungan_id}`)}
+                          className="btn-primary btn-sm"
+                        >
+                          <CreditCard className="w-3.5 h-3.5" /> Proses
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}

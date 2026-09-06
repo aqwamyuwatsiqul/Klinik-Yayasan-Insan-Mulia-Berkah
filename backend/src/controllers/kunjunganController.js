@@ -165,6 +165,15 @@ const selesaikanKunjungan = async (req, res) => {
         if (!tarif) throw Object.assign(new Error(`Tarif ID ${tid} tidak ditemukan atau tidak aktif`), { statusCode: 400 });
       }
 
+      // Simpan pilihan tarif dokter ke tabel kunjungan_tarif agar kasir bisa
+      // mengambilnya otomatis saat membuka halaman proses pembayaran
+      for (const tid of tarif_ids) {
+        await client.query(
+          'INSERT INTO kunjungan_tarif(kunjungan_id, tarif_id, dipilih_oleh) VALUES($1,$2,$3)',
+          [id, parseInt(tid), req.user.id]
+        );
+      }
+
       await client.query(
         "UPDATE kunjungan SET status='menunggu_bayar' WHERE id=$1", [id]
       );

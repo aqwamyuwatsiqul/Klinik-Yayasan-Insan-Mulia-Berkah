@@ -176,7 +176,7 @@ export default function App() {
                 <Route path="/kunjungan" element={<RoleGuard roles={['admin']}><Kunjungan /></RoleGuard>} />
 
                 {/* Dokter */}
-                <Route path="/antrian"        element={<RoleGuard roles={['dokter', 'owner']}><AntrianDokter /></RoleGuard>} />
+                <Route path="/antrian"        element={<RoleGuard roles={['dokter']}><AntrianDokter /></RoleGuard>} />
                 <Route path="/pasien-riwayat" element={<RoleGuard roles={['dokter', 'owner']}><RiwayatPasien /></RoleGuard>} />
 
                 {/* Apoteker */}
