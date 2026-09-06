@@ -1,5 +1,6 @@
 const pool   = require('../config/database');
 const logger = require('../utils/logger');
+const { withTransaction } = require('../utils/db');
 const { success, created, notFound, badRequest } = require('../utils/response');
 const { isValidDate } = require('../utils/validate');
 
@@ -132,13 +133,9 @@ const updateStatus = async (req, res) => {
   }
 };
 
-module.exports = { getAntrian, getById, create, updateStatus };
-
 // ── Selesaikan kunjungan tanpa resep → menunggu_bayar ─────────────────────
 // Dipanggil dokter/admin setelah pemeriksaan selesai tapi tidak ada resep.
 // Body: { tarif_ids: [1, 2, ...] } — tarif yang dipilih dokter.
-const { withTransaction } = require('../utils/db');
-
 const selesaikanKunjungan = async (req, res) => {
   try {
     const id = parseInt(req.params.id);
