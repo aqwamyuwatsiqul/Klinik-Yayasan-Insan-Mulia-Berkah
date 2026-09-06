@@ -216,6 +216,7 @@ app.use('/api/obat',        require('./routes/obat'));
 app.use('/api/laporan',     require('./routes/laporan'));
 app.use('/api/tarif',       require('./routes/tarif'));
 app.use('/api/pembayaran',  require('./routes/pembayaran'));
+app.use('/api/audit',       require('./routes/audit'));
 
 // ── Health check ───────────────────────────────────────────────────────────
 // L4 FIX: Di production, kembalikan respons minimal (tidak bocorkan timestamp

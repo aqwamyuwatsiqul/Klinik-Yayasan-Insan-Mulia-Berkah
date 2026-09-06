@@ -3,7 +3,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import useAuthedImage from '../../hooks/useAuthedImage';
 import {
   LayoutDashboard, Users, UserCog, Stethoscope, ClipboardList,
-  FlaskConical, Package, FileBarChart, History, Receipt, CreditCard, Tags,
+  FlaskConical, Package, FileBarChart, History, Receipt, CreditCard, Tags, ShieldCheck,
 } from 'lucide-react';
 
 const ICON_W = 64;
@@ -16,6 +16,7 @@ const NAV = {
     { to: '/laporan',           Icon: FileBarChart,    label: 'Laporan'            },
     { to: '/tarif',             Icon: Tags,            label: 'Tarif layanan'      },
     { to: '/riwayat-transaksi', Icon: Receipt,         label: 'Riwayat transaksi'  },
+    { to: '/audit-log',         Icon: ShieldCheck,     label: 'Audit log'          },
     { to: '/antrian',           Icon: ClipboardList,   label: 'Antrian pasien'     },
     { to: '/pasien-riwayat',    Icon: History,         label: 'Riwayat pasien'     },
     { to: '/pasien',            Icon: Users,           label: 'Data pasien'        },

@@ -4,6 +4,8 @@ const { success, created, notFound, badRequest } = require('../utils/response');
 const { parsePagination, paginateQuery } = require('../utils/pagination');
 const { isValidDate } = require('../utils/validate');
 
+const { recordAudit } = require('../utils/audit');
+
 const getAll = async (req, res) => {
   try {
     const pg     = parsePagination(req.query);
@@ -131,6 +133,12 @@ const update = async (req, res) => {
     if (tanggal_lahir && !isValidDate(tanggal_lahir))
       return badRequest(res, 'Format tanggal lahir tidak valid');
 
+    // Ambil nilai lama untuk diff identitas sensitif
+    const sebelum = (await pool.query(
+      'SELECT nik, tanggal_lahir FROM pasien WHERE id=$1 AND deleted_at IS NULL', [id]
+    )).rows[0];
+    if (!sebelum) return notFound(res, 'Pasien tidak ditemukan');
+
     const { rows } = await pool.query(
       `UPDATE pasien
        SET nama=$1, tanggal_lahir=$2, jenis_kelamin=$3, alamat=$4,
@@ -151,6 +159,33 @@ const update = async (req, res) => {
       ]
     );
     if (!rows.length) return notFound(res, 'Pasien tidak ditemukan');
+
+    // Catat jika NIK atau tanggal_lahir berubah
+    const perubahan = {};
+    const nikLama   = sebelum.nik ?? null;
+    const nikBaru   = nik    || null;
+    const tglLama   = sebelum.tanggal_lahir
+      ? new Date(sebelum.tanggal_lahir).toISOString().slice(0, 10)
+      : null;
+    const tglBaru   = tanggal_lahir || null;
+
+    if (nikLama !== nikBaru)     perubahan.nik           = [nikLama, nikBaru];
+    if (tglLama !== tglBaru)     perubahan.tanggal_lahir = [tglLama, tglBaru];
+
+    if (Object.keys(perubahan).length > 0) {
+      recordAudit(pool, logger, {
+        userId    : req.user.id,
+        userName  : req.user.nama,
+        userRole  : req.user.role,
+        aksi      : 'UBAH_IDENTITAS_PASIEN',
+        entitas   : 'pasien',
+        entitasId : id,
+        deskripsi : `Identitas sensitif pasien #${id} (${rows[0].nama}) diubah`,
+        perubahan,
+        ipAddress : req.ip,
+      });
+    }
+
     return success(res, rows[0], 'Data pasien berhasil diperbarui');
   } catch (err) {
     logger.error({ err, userId: req.user?.id }, 'pasienController.update');

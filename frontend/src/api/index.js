@@ -78,3 +78,8 @@ export const pembayaranAPI = {
   proses:          (kunjunganId, d) => api.post(`/pembayaran/kunjungan/${kunjunganId}`, d),
   void:            (id, d)       => api.patch(`/pembayaran/${id}/void`, d),
 };
+
+export const auditAPI = {
+  getAll:  (p) => api.get('/audit', { params: p }),
+  getUsers: () => api.get('/audit/users'),
+};

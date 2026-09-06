@@ -4,6 +4,7 @@ const { withTransaction } = require('../utils/db');
 const { success, created, notFound, badRequest, forbidden } = require('../utils/response');
 const { parsePagination, paginateQuery } = require('../utils/pagination');
 const { isValidDate } = require('../utils/validate');
+const { recordAudit } = require('../utils/audit');
 
 // ── Antrian kasir: kunjungan menunggu_bayar hari ini ──────────────────────
 const getAntrian = async (req, res) => {
@@ -260,6 +261,29 @@ const voidPembayaran = async (req, res) => {
       );
 
       return result;
+    });
+
+    // Catat void ke audit log setelah response terkirim (fire-and-forget)
+    // Menggunakan res.on('finish') agar tidak menunda response ke client
+    res.on('finish', () => {
+      // Ambil info pasien untuk deskripsi yang informatif
+      pool.query(
+        `SELECT p.nama AS nama_pasien, pb.total_tagihan
+         FROM pembayaran pb JOIN pasien p ON pb.pasien_id=p.id WHERE pb.id=$1`, [id]
+      ).then(({ rows }) => {
+        const info = rows[0] || {};
+        recordAudit(pool, logger, {
+          userId    : req.user.id,
+          userName  : req.user.nama,
+          userRole  : req.user.role,
+          aksi      : 'VOID_PEMBAYARAN',
+          entitas   : 'pembayaran',
+          entitasId : id,
+          deskripsi : `Pembayaran #${id} di-void (pasien: ${info.nama_pasien ?? '-'}, total: Rp ${Number(info.total_tagihan ?? 0).toLocaleString('id')})`,
+          perubahan : { alasan: alasan_void.trim() },
+          ipAddress : req.ip,
+        });
+      }).catch(() => {});
     });
 
     return success(res, updated, 'Transaksi berhasil di-void');

@@ -3,6 +3,7 @@ const logger = require('../utils/logger');
 const { withTransaction } = require('../utils/db');
 const { success, created, notFound, badRequest, forbidden } = require('../utils/response');
 const { parsePagination, paginateQuery } = require('../utils/pagination');
+const { recordAudit } = require('../utils/audit');
 
 // ── FIX S3: IDOR — cek kepemilikan dokter sebelum return data ──────────────
 const getByKunjungan = async (req, res) => {
@@ -30,6 +31,18 @@ const getByKunjungan = async (req, res) => {
       )).rows[0];
       if (!dr || dr.id !== rows[0].dokter_id)
         return forbidden(res, 'Akses ditolak. Anda bukan dokter pemeriksa pasien ini.');
+    } else {
+      // Non-medis (admin/owner) membuka rekam medis — catat akses
+      recordAudit(pool, logger, {
+        userId    : req.user.id,
+        userName  : req.user.nama,
+        userRole  : req.user.role,
+        aksi      : 'LIHAT_REKAM_MEDIS',
+        entitas   : 'rekam_medis',
+        entitasId : rows[0].id,
+        deskripsi : `${req.user.role} membuka rekam medis kunjungan #${kunjunganId} (pasien: ${rows[0].nama_pasien})`,
+        ipAddress : req.ip,
+      });
     }
     return success(res, rows[0]);
   } catch (err) {
@@ -85,6 +98,20 @@ const getByPasien = async (req, res) => {
       [pasienId],
       pg
     );
+
+    // Non-medis (admin/owner) membuka riwayat rekam medis pasien — catat akses
+    if (req.user.role !== 'dokter') {
+      recordAudit(pool, logger, {
+        userId    : req.user.id,
+        userName  : req.user.nama,
+        userRole  : req.user.role,
+        aksi      : 'LIHAT_REKAM_MEDIS',
+        entitas   : 'rekam_medis',
+        entitasId : pasienId,
+        deskripsi : `${req.user.role} membuka riwayat rekam medis pasien #${pasienId} (${result.data.length > 0 ? result.data[0].nama_dokter ?? '' : ''})`,
+        ipAddress : req.ip,
+      });
+    }
 
     return success(res, result);
   } catch (err) {

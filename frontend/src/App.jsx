@@ -30,8 +30,9 @@ const Pengaturan    = lazy(() => import('./pages/Pengaturan'));
 const Dokter        = lazy(() => import('./pages/admin/Dokter'));
 const Users         = lazy(() => import('./pages/admin/Users'));
 const Laporan       = lazy(() => import('./pages/admin/Laporan')); // berat karena jsPDF
-const TarifLayanan  = lazy(() => import('./pages/owner/TarifLayanan'));
+const TarifLayanan     = lazy(() => import('./pages/owner/TarifLayanan'));
 const RiwayatTransaksi = lazy(() => import('./pages/owner/RiwayatTransaksi'));
+const AuditLog         = lazy(() => import('./pages/owner/AuditLog'));
 
 // Admin — operasional harian
 const Pasien        = lazy(() => import('./pages/admin/Pasien'));
@@ -168,6 +169,7 @@ export default function App() {
                 {/* Owner — master data & laporan */}
                 <Route path="/tarif"              element={<RoleGuard roles={['owner','admin']}><TarifLayanan /></RoleGuard>} />
                 <Route path="/riwayat-transaksi"  element={<RoleGuard roles={['owner','admin']}><RiwayatTransaksi /></RoleGuard>} />
+                <Route path="/audit-log"          element={<RoleGuard roles={['owner']}><AuditLog /></RoleGuard>} />
 
                 {/* Kasir */}
                 <Route path="/kasir/antrian"      element={<RoleGuard roles={['kasir','admin','owner']}><AntrianKasir /></RoleGuard>} />
