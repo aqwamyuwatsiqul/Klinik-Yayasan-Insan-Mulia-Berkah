@@ -19,14 +19,37 @@ const requireString = (value, fieldName, min = 1, max = 500) => {
 
 /** Middleware validasi body pasien */
 const validatePasien = (req, res, next) => {
-  const { nama, tanggal_lahir, jenis_kelamin } = req.body;
-  const err = requireString(nama, 'Nama', 2, 200);
-  if (err) return badRequest(res, err);
+  const { nama, tanggal_lahir, jenis_kelamin, jenis_pasien, kelas, nik } = req.body;
+
+  // Nama wajib
+  const errNama = requireString(nama, 'Nama', 2, 200);
+  if (errNama) return badRequest(res, errNama);
+
+  // Tanggal lahir opsional tapi harus valid jika diisi
   if (tanggal_lahir && !isValidDate(tanggal_lahir))
     return badRequest(res, 'Format tanggal lahir tidak valid');
+
+  // Jenis kelamin
   if (jenis_kelamin && !['Laki-laki', 'Perempuan'].includes(jenis_kelamin))
     return badRequest(res, 'Jenis kelamin harus Laki-laki atau Perempuan');
-  req.body.nama = nama.trim();
+
+  // Jenis pasien — default ke 'siswa' jika tidak dikirim
+  const jenisPasienVal = jenis_pasien || 'siswa';
+  if (!['siswa', 'umum'].includes(jenisPasienVal))
+    return badRequest(res, "Jenis pasien harus 'siswa' atau 'umum'");
+
+  // Kelas wajib diisi jika jenis_pasien = siswa
+  if (jenisPasienVal === 'siswa') {
+    const errKelas = requireString(kelas, 'Kelas', 1, 50);
+    if (errKelas) return badRequest(res, 'Kelas wajib diisi untuk pasien siswa');
+  }
+
+  // NIK: opsional, tapi jika diisi harus 16 digit angka
+  if (nik && !/^\d{16}$/.test(String(nik).trim()))
+    return badRequest(res, 'NIK harus berupa 16 digit angka');
+
+  req.body.nama         = nama.trim();
+  req.body.jenis_pasien = jenisPasienVal;
   next();
 };
 

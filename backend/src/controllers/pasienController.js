@@ -8,6 +8,7 @@ const getAll = async (req, res) => {
   try {
     const pg     = parsePagination(req.query);
     const search = (req.query.search || '').trim();
+    const jenis  = req.query.jenis_pasien || '';
 
     const conditions = ['deleted_at IS NULL'];
     const params     = [];
@@ -15,16 +16,25 @@ const getAll = async (req, res) => {
     if (search) {
       params.push(`%${search}%`);
       conditions.push(
-        `(nama ILIKE $${params.length} OR no_rm ILIKE $${params.length} OR kelas ILIKE $${params.length})`
+        `(nama ILIKE $${params.length} OR no_rm ILIKE $${params.length} OR kelas ILIKE $${params.length} OR nis ILIKE $${params.length})`
       );
+    }
+
+    if (jenis && ['siswa', 'umum'].includes(jenis)) {
+      params.push(jenis);
+      conditions.push(`jenis_pasien=$${params.length}`);
     }
 
     const where = 'WHERE ' + conditions.join(' AND ');
 
-    // M5 FIX: satu query dengan COUNT(*) OVER() — tidak ada double round-trip
     const result = await paginateQuery(
       pool,
-      `SELECT id, no_rm, nama, tanggal_lahir, jenis_kelamin, alamat, no_telepon, kelas, created_at
+      `SELECT id, no_rm, nama, jenis_pasien, tanggal_lahir, jenis_kelamin,
+              alamat, no_telepon, kelas, nis,
+              -- flag keberadaan info medis kritis — untuk indikator ⚠ di list
+              (alergi IS NOT NULL AND alergi <> '')         AS has_alergi,
+              (kondisi_khusus IS NOT NULL AND kondisi_khusus <> '') AS has_kondisi,
+              created_at
        FROM pasien ${where} ORDER BY created_at DESC`,
       params,
       pg
@@ -64,21 +74,37 @@ const getById = async (req, res) => {
   }
 };
 
-// ── FIX S5: Validasi sudah dilakukan di middleware validatePasien ──────────
 const create = async (req, res) => {
   try {
-    const { nama, tanggal_lahir, jenis_kelamin, alamat, no_telepon, kelas, keterangan } = req.body;
+    const {
+      nama, tanggal_lahir, jenis_kelamin, alamat, no_telepon,
+      kelas, keterangan,
+      // field baru
+      jenis_pasien, nis, nik,
+      nama_wali, telepon_wali, hubungan_wali,
+      alergi, kondisi_khusus,
+    } = req.body;
 
-    // Validasi tanggal — mencegah crash PostgreSQL dari string tidak valid
     if (tanggal_lahir && !isValidDate(tanggal_lahir))
       return badRequest(res, 'Format tanggal lahir tidak valid');
 
     const no_rm = (await pool.query('SELECT generate_no_rm() AS no_rm')).rows[0].no_rm;
     const { rows } = await pool.query(
-      `INSERT INTO pasien(no_rm, nama, tanggal_lahir, jenis_kelamin, alamat, no_telepon, kelas, keterangan)
-       VALUES($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
-      [no_rm, nama.trim(), tanggal_lahir || null, jenis_kelamin || null,
-        alamat || null, no_telepon || null, kelas || null, keterangan || null]
+      `INSERT INTO pasien(
+         no_rm, nama, tanggal_lahir, jenis_kelamin, alamat, no_telepon, kelas, keterangan,
+         jenis_pasien, nis, nik,
+         nama_wali, telepon_wali, hubungan_wali,
+         alergi, kondisi_khusus
+       ) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
+       RETURNING *`,
+      [
+        no_rm, nama.trim(), tanggal_lahir || null, jenis_kelamin || null,
+        alamat || null, no_telepon || null, kelas || null, keterangan || null,
+        jenis_pasien || 'siswa',
+        nis || null, nik || null,
+        nama_wali || null, telepon_wali || null, hubungan_wali || null,
+        alergi || null, kondisi_khusus || null,
+      ]
     );
     return created(res, rows[0], 'Pasien berhasil didaftarkan');
   } catch (err) {
@@ -92,18 +118,37 @@ const update = async (req, res) => {
     const id = parseInt(req.params.id);
     if (isNaN(id)) return badRequest(res, 'ID pasien tidak valid');
 
-    const { nama, tanggal_lahir, jenis_kelamin, alamat, no_telepon, kelas, keterangan } = req.body;
+    const {
+      nama, tanggal_lahir, jenis_kelamin, alamat, no_telepon,
+      kelas, keterangan,
+      // field baru
+      jenis_pasien, nis, nik,
+      nama_wali, telepon_wali, hubungan_wali,
+      alergi, kondisi_khusus,
+    } = req.body;
 
     if (!nama || !nama.trim()) return badRequest(res, 'Nama pasien wajib diisi');
     if (tanggal_lahir && !isValidDate(tanggal_lahir))
       return badRequest(res, 'Format tanggal lahir tidak valid');
 
     const { rows } = await pool.query(
-      `UPDATE pasien SET nama=$1, tanggal_lahir=$2, jenis_kelamin=$3, alamat=$4,
-              no_telepon=$5, kelas=$6, keterangan=$7
-       WHERE id=$8 AND deleted_at IS NULL RETURNING *`,
-      [nama.trim(), tanggal_lahir || null, jenis_kelamin || null,
-        alamat || null, no_telepon || null, kelas || null, keterangan || null, id]
+      `UPDATE pasien
+       SET nama=$1, tanggal_lahir=$2, jenis_kelamin=$3, alamat=$4,
+           no_telepon=$5, kelas=$6, keterangan=$7,
+           jenis_pasien=$8, nis=$9, nik=$10,
+           nama_wali=$11, telepon_wali=$12, hubungan_wali=$13,
+           alergi=$14, kondisi_khusus=$15
+       WHERE id=$16 AND deleted_at IS NULL
+       RETURNING *`,
+      [
+        nama.trim(), tanggal_lahir || null, jenis_kelamin || null,
+        alamat || null, no_telepon || null, kelas || null, keterangan || null,
+        jenis_pasien || 'siswa',
+        nis || null, nik || null,
+        nama_wali || null, telepon_wali || null, hubungan_wali || null,
+        alergi || null, kondisi_khusus || null,
+        id,
+      ]
     );
     if (!rows.length) return notFound(res, 'Pasien tidak ditemukan');
     return success(res, rows[0], 'Data pasien berhasil diperbarui');
