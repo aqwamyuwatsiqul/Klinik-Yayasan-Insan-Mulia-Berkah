@@ -112,11 +112,12 @@ function DaftarModal({ open, onClose }) {
 }
 
 const statusConfig = {
-  '':          { label: 'Semua',   active: 'bg-primary text-white' },
-  menunggu:    { label: 'Menunggu',  active: 'bg-primary text-white' },
-  diperiksa:   { label: 'Diperiksa', active: 'bg-primary text-white' },
-  selesai:     { label: 'Selesai',   active: 'bg-primary text-white' },
-  batal:       { label: 'Batal',     active: 'bg-primary text-white' },
+  '':             { label: 'Semua',          active: 'bg-primary text-white' },
+  menunggu:       { label: 'Menunggu',       active: 'bg-primary text-white' },
+  diperiksa:      { label: 'Diperiksa',      active: 'bg-primary text-white' },
+  menunggu_bayar: { label: 'Menunggu Bayar', active: 'bg-primary text-white' },
+  selesai:        { label: 'Selesai',        active: 'bg-primary text-white' },
+  batal:          { label: 'Batal',          active: 'bg-primary text-white' },
 };
 
 export default function Kunjungan() {
@@ -218,7 +219,7 @@ export default function Kunjungan() {
                       </td>
                       <td><span className={cls}>{label}</span></td>
                       <td>
-                        {k.status === 'menunggu' && (
+                        {['menunggu', 'diperiksa', 'menunggu_bayar'].includes(k.status) && (
                           <button
                             onClick={() => statusMut.mutate({ id: k.id, status: 'batal' })}
                             className="btn-secondary btn-sm text-status-danger border-status-danger/30 hover:bg-status-danger-bg"

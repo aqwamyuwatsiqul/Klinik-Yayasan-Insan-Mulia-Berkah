@@ -339,7 +339,12 @@ export default function AntrianDokter() {
 
   const startMut = useMutation({
     mutationFn: (id) => kunjunganAPI.updateStatus(id, { status: 'diperiksa' }),
-    onSuccess: () => qc.invalidateQueries(['antrian-dokter']),
+    onSuccess: (_, id) => {
+      qc.invalidateQueries(['antrian-dokter']);
+      // Buka modal SETELAH server konfirmasi — bukan optimistic
+      setSelected(list.find((k) => k.id === id));
+    },
+    onError: (e) => toast.error(getErrorMessage(e)),
   });
 
   const list = data || [];
@@ -413,7 +418,8 @@ export default function AntrianDokter() {
 
               {k.status === 'menunggu' && (
                 <button
-                  onClick={() => { startMut.mutate(k.id); setSelected(k); }}
+                  onClick={() => startMut.mutate(k.id)}
+                  disabled={startMut.isPending}
                   className="btn-primary btn-sm w-full"
                 >
                   <ClipboardList className="w-3.5 h-3.5" /> Mulai periksa

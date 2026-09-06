@@ -11,7 +11,7 @@ const getAntrian = async (req, res) => {
 
     if (!isValidDate(tanggal)) return badRequest(res, 'Format tanggal tidak valid');
 
-    const validStatus = ['menunggu', 'diperiksa', 'selesai', 'batal'];
+    const validStatus = ['menunggu', 'diperiksa', 'menunggu_bayar', 'selesai', 'batal'];
     if (status && !validStatus.includes(status))
       return badRequest(res, 'Status tidak valid');
 
@@ -111,7 +111,7 @@ const updateStatus = async (req, res) => {
     if (isNaN(id)) return badRequest(res, 'ID kunjungan tidak valid');
 
     const { status, dokter_id } = req.body;
-    const validStatus = ['menunggu', 'diperiksa', 'selesai', 'batal'];
+    const validStatus = ['menunggu', 'diperiksa', 'menunggu_bayar', 'selesai', 'batal'];
     if (!validStatus.includes(status)) return badRequest(res, 'Status tidak valid');
 
     const sets   = ['status=$1', 'updated_at=NOW()'];
