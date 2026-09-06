@@ -1,6 +1,7 @@
 # Sistem Informasi Klinik — Yayasan Insan Mulia Berkah
 
-Aplikasi web manajemen klinik berbasis peran (RBAC) untuk **Admin**, **Dokter**, dan **Apoteker**.
+Aplikasi web manajemen klinik berbasis peran (RBAC) untuk **Owner, Admin, Dokter, Apoteker**, dan **Kasir**.
+Melayani siswa sekolah (UKS) dan masyarakat umum.
 Dibangun dengan Node.js + React, dengan fokus pada keamanan produksi, performa tinggi, dan integritas data medis.
 
 > *Melayani dengan hati, memberi dengan ikhlas.*
@@ -83,8 +84,8 @@ npm run install:all
 
 ```bash
 cd backend
-npm run migrate   # buat semua tabel + indexes
-npm run seed      # isi data awal (user default + contoh obat)
+npm run migrate   # jalankan semua migration (001, 002, 003) secara berurutan
+npm run seed      # isi data awal (user default + contoh obat + contoh pasien)
 ```
 
 Atau sekaligus:
@@ -115,14 +116,42 @@ Buka browser: **http://localhost:5173**
 
 | Username  | Password     | Role     |
 |-----------|--------------|----------|
+| owner     | Password123! | Owner    |
 | admin     | Password123! | Admin    |
 | dokter1   | Password123! | Dokter   |
 | dokter2   | Password123! | Dokter   |
 | apoteker1 | Password123! | Apoteker |
 
 > Ganti password setelah login pertama via menu **Pengaturan akun**.
+> Akun Owner sudah tersedia di seed — gunakan untuk mengelola user lain.
+> Akun Kasir dapat dibuat oleh Owner melalui menu **Manajemen user**.
 
 Login menggunakan **username** atau **email**.
+
+---
+
+## Role & Wewenang
+
+Sistem menggunakan **5 role** dengan pemisahan wewenang yang jelas:
+
+| Kemampuan | Owner | Admin | Dokter | Apoteker | Kasir |
+|---|:---:|:---:|:---:|:---:|:---:|
+| Manajemen user (CRUD) | ✅ | — | — | — | — |
+| Kelola data dokter | ✅ | — | — | — | — |
+| Laporan kunjungan | ✅ | ✅ | — | — | — |
+| Laporan obat | ✅ | ✅ | — | ✅ | — |
+| Dashboard & statistik | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Data pasien (lihat) | ✅ | ✅ | ✅ | — | — |
+| Data pasien (daftar/edit) | — | ✅ | — | — | — |
+| Daftar kunjungan | — | ✅ | ✅ | — | — |
+| Antrian kunjungan (lihat) | ✅ | ✅ | ✅ | — | — |
+| **Rekam medis (buat/ubah)** | — | — | ✅ | — | — |
+| Rekam medis (lihat) | ✅ | ✅ | ✅ (milik sendiri) | — | — |
+| Tulis resep | — | — | ✅ | — | — |
+| Antrian resep (lihat/konfirmasi) | — | ✅ | — | ✅ | — |
+| Kelola obat & stok | — | ✅ | — | ✅ | — |
+
+> **Catatan:** Kasir adalah role placeholder untuk modul pembayaran yang akan dibangun. Saat ini hanya bisa akses dashboard dan profil.
 
 ---
 
@@ -140,27 +169,39 @@ Login menggunakan **username** atau **email**.
 - Sesi otomatis berakhir saat browser/tab ditutup (`sessionStorage`)
 - Halaman 403 informatif saat akses route yang tidak diizinkan
 
+### Owner
+- Kelola seluruh **manajemen user** (CRUD semua role termasuk owner & kasir, reset password)
+- Kelola **master data dokter** (edit profil, status aktif, hapus)
+- Akses **laporan kunjungan dan laporan obat** lengkap
+- Monitor antrian pasien dan riwayat pasien (read-only)
+- Lihat rekam medis (read-only, tidak bisa membuat/mengubah)
+
 ### Admin
 - Dashboard: statistik pasien, kunjungan hari ini & bulan ini, resep menunggu, stok obat, grafik 7 hari
 - **Tombol Display TV** di card kunjungan — buka layar antrian publik di tab baru
-- **Data pasien**: CRUD, No. RM otomatis (`RM-YYYY-XXXXX`), riwayat kunjungan
-- **Data dokter**: kelola profil & status aktif
+- **Data pasien**: daftar & edit pasien (siswa dan umum), No. RM otomatis (`RM-YYYY-XXXXX`)
 - **Manajemen kunjungan**: daftarkan, batalkan, filter tanggal & status
-- **Manajemen user**: buat admin/dokter/apoteker, reset password, nonaktifkan
 - **Laporan**: filter periode + dokter + status, ringkasan statistik, **export PDF**
+- Akses antrian resep dan kelola stok obat
 
 ### Dokter
 - **Antrian pasien**: daftar kunjungan hari ini per-status, refresh 30 detik
-- **Input rekam medis**: vital sign (TD, suhu, BB, TB), keluhan, diagnosa, terapi
+- **Input rekam medis**: vital sign (TD, suhu, BB, TB), keluhan, diagnosa, terapi — **hanya dokter yang bisa**
 - **Tulis resep**: multi-obat dengan dosis & aturan pakai, cek stok real-time
-- **Riwayat pasien**: cari pasien, riwayat rekam medis accordion
-- **Data pasien**: akses read-only (tanpa edit/hapus)
+- **Riwayat pasien**: cari pasien, riwayat rekam medis (hanya pasien yang pernah ditangani sendiri)
+- **Data pasien**: akses read-only termasuk info medis kritis (alergi, kondisi khusus)
 
 ### Apoteker
 - **Antrian resep**: daftar resep masuk, detail item & stok
 - **Konfirmasi penyerahan**: stok berkurang otomatis, kunjungan selesai otomatis
 - **Data obat**: CRUD, kode obat otomatis (`OBT-XXXXX`), update stok (masuk/keluar/koreksi + log)
 - Alert stok rendah & obat hampir kadaluarsa (≤ 30 hari)
+- Akses laporan obat
+
+### Kasir
+- Dashboard statistik (read-only)
+- Edit profil dan ganti password
+- *(Modul pembayaran akan ditambahkan di tahap berikutnya)*
 
 ### Display TV Antrian *(publik, tanpa login)*
 - Halaman fullscreen untuk monitor/TV ruang tunggu — akses di `/tv`
@@ -175,6 +216,33 @@ Login menggunakan **username** atau **email**.
 
 ---
 
+## Data Pasien — Dua Jenis Pasien
+
+Sistem mendukung dua jenis pasien yang dapat dipilih saat pendaftaran:
+
+### Pasien Siswa
+Field khusus siswa:
+- **Kelas** — wajib diisi (cth: X IPA 1, VII B)
+- **NIS** — Nomor Induk Siswa (opsional)
+
+### Pasien Umum
+Field khusus umum:
+- **NIK** — Nomor Induk Kependudukan 16 digit (opsional)
+
+### Field untuk Kedua Jenis
+| Field | Keterangan |
+|---|---|
+| Nama lengkap | Wajib |
+| Tanggal lahir, Jenis kelamin | Opsional |
+| Telepon, Alamat | Opsional |
+| Nama wali, Hubungan wali, Telepon wali | Kontak darurat — penting untuk siswa |
+| **Alergi** | ⚠ Ditampilkan menonjol (banner merah) di detail pasien |
+| **Kondisi medis khusus** | ⚠ Ditampilkan menonjol (banner merah) di detail pasien |
+
+**Informasi medis kritis** (alergi & kondisi khusus) ditampilkan sebagai **banner merah besar di bagian paling atas** halaman detail pasien — mudah terlihat oleh dokter atau petugas UKS saat kondisi darurat. Di tabel list, pasien dengan info medis kritis diberi indikator ⚠ merah kecil di samping namanya.
+
+---
+
 ## Keamanan
 
 Sistem telah melalui **audit keamanan lengkap (24 item)** mencakup OWASP Top 10.
@@ -182,7 +250,8 @@ Sistem telah melalui **audit keamanan lengkap (24 item)** mencakup OWASP Top 10.
 | Aspek | Implementasi |
 |-------|-------------|
 | Autentikasi | JWT + verifikasi ke DB setiap request |
-| Otorisasi | RBAC `authorize(...roles)` per route |
+| Otorisasi | RBAC `authorize(...roles)` per route — 5 role |
+| Rekam medis | Hanya dokter yang bisa buat/ubah — owner & admin read-only |
 | Brute-force | Rate limit: 10 percobaan login / 15 menit / IP |
 | JWT revoke | `password_changed_at` — token lama invalid setelah ganti password |
 | CSRF | Custom header `X-Requested-With: XMLHttpRequest` di semua mutasi |
@@ -192,7 +261,7 @@ Sistem telah melalui **audit keamanan lengkap (24 item)** mencakup OWASP Top 10.
 | `/uploads` | Dilindungi `authenticate` middleware — tidak bisa diakses publik |
 | Foto profil (frontend) | `useAuthedImage` hook — fetch via axios+Bearer, simpan sebagai blob URL |
 | Race condition stok | `SELECT ... FOR UPDATE` dalam transaksi PostgreSQL |
-| Input validation | Middleware `validatePasien/User/Obat/Kunjungan` di semua route mutasi |
+| Input validation | Middleware validate di semua route mutasi termasuk validatePasien baru |
 | Security headers | HSTS, CSP, frameguard, noSniff, hidePoweredBy, referrerPolicy, Permissions-Policy |
 | Token storage | `sessionStorage` — bersih saat browser/tab ditutup |
 | Password | bcrypt cost factor 12, dummy hash untuk anti timing-attack |
@@ -204,8 +273,6 @@ Sistem telah melalui **audit keamanan lengkap (24 item)** mencakup OWASP Top 10.
 ---
 
 ## Performa
-
-Sistem telah melalui **audit performa** dan dioptimasi untuk Core Web Vitals.
 
 | Aspek | Implementasi |
 |-------|-------------|
@@ -224,7 +291,7 @@ Sistem telah melalui **audit performa** dan dioptimasi untuk Core Web Vitals.
 | App loader | Inline spinner sebelum React mount — tidak ada layar putih (FOUC) |
 | Touch targets | Minimum 44×44px — WCAG 2.5.5 |
 | Retry | `axios-retry` — 2x retry untuk GET, delay 800ms/1600ms |
-| DB indexes | 24 partial index (`WHERE deleted_at IS NULL`) pada kolom kritis |
+| DB indexes | 27 partial index (`WHERE deleted_at IS NULL`) pada kolom kritis |
 | Foto profil (blob) | `useAuthedImage` cache blob URL in-memory — tidak fetch ulang per render |
 
 ---
@@ -243,7 +310,9 @@ Klinik/
 │   │   └── profil/              # Foto profil (exclude dari git)
 │   ├── database/
 │   │   ├── migrations/
-│   │   │   ├── 001_create_tables.sql
+│   │   │   ├── 001_create_tables.sql    # Skema awal semua tabel
+│   │   │   ├── 002_role_owner_kasir.sql # Tambah role owner & kasir
+│   │   │   ├── 003_pasien_extended.sql  # Extend tabel pasien (8 kolom baru)
 │   │   │   └── run.js
 │   │   └── seeds/
 │   │       ├── 001_seed_data.sql
@@ -258,9 +327,9 @@ Klinik/
 │       │   ├── kunjunganController.js # getAntrian, getById, create, updateStatus
 │       │   │                          # + getAntrianPublik (Display TV, tanpa auth)
 │       │   ├── laporanController.js  # getDashboard (cache 60s), laporan kunjungan & obat
+│       │   ├── pasienController.js   # CRUD pasien + support siswa/umum + filter jenis
 │       │   ├── dokterController.js
 │       │   ├── obatController.js
-│       │   ├── pasienController.js
 │       │   ├── rekamMedisController.js
 │       │   ├── resepController.js
 │       │   └── userController.js
@@ -275,7 +344,7 @@ Klinik/
 │           ├── logger.js        # Pino + redact PII
 │           ├── pagination.js    # parsePagination + paginateQuery (COUNT OVER)
 │           ├── response.js      # Standard HTTP response helper
-│           └── validate.js      # Input validation middleware
+│           └── validate.js      # Input validation middleware (incl. validatePasien v2)
 └── frontend/
     ├── .gitignore
     ├── vite.config.js           # manualChunks, esbuild minify, proxy /api & /uploads
@@ -284,10 +353,9 @@ Klinik/
     ├── public/
     │   ├── logo.webp            # Logo utama (19 KB, dioptimasi dari 228 KB)
     │   ├── logo-fallback.png    # Fallback untuk browser tanpa WebP
-    │   ├── favicon-64.png       # Favicon 64×64 px
-    │   └── raw/                 # ← TIDAK ADA (dipindah ke scripts/raw/ agar tidak ikut dist)
+    │   └── favicon-64.png       # Favicon 64×64 px
     ├── scripts/
-    │   ├── optimize-images.js   # Sharp: konversi public/raw/ → WebP + fallback PNG
+    │   ├── optimize-images.js   # Sharp: konversi scripts/raw/ → WebP + fallback PNG
     │   └── raw/
     │       └── logo.png         # Sumber gambar asli (tidak di-deploy)
     └── src/
@@ -297,14 +365,14 @@ Klinik/
         ├── components/
         │   ├── common/          # Spinner, Pagination, SearchInput, EmptyState,
         │   │                    # ConfirmDialog, ErrorBoundary
-        │   └── layout/          # Sidebar (resizable), Topbar, MainLayout
+        │   └── layout/          # Sidebar (resizable, NAV per 5 role), Topbar, MainLayout
         ├── contexts/
         │   └── AuthContext.jsx  # sessionStorage, setUser sync
         ├── hooks/
-        │   ├── useNotifikasi.js # Bell notifikasi per role (polling 30s)
+        │   ├── useNotifikasi.js  # Bell notifikasi per role (polling 30s)
         │   └── useAuthedImage.js # Fetch gambar terproteksi via Bearer token → blob URL
         ├── pages/
-        │   ├── admin/           # Pasien, Dokter, Users, Kunjungan, Laporan
+        │   ├── admin/           # Pasien (siswa/umum), Dokter, Users, Kunjungan, Laporan
         │   ├── dokter/          # Antrian, RiwayatPasien
         │   ├── apoteker/        # AntrianResep, Obat
         │   ├── Dashboard.jsx    # Eager loaded — tombol Display TV
@@ -313,7 +381,7 @@ Klinik/
         │   ├── Profil.jsx       # Lazy loaded
         │   └── Pengaturan.jsx   # Lazy loaded
         └── utils/
-            └── helpers.js       # formatDate, hitungUmur, statusLabel, dll
+            └── helpers.js       # formatDate, hitungUmur, statusLabel, roleLabel (5 role)
 ```
 
 ---
@@ -322,43 +390,47 @@ Klinik/
 
 ### Publik (tanpa autentikasi)
 
-| Method | Path                | Keterangan                                      |
-|--------|---------------------|-------------------------------------------------|
-| POST   | /api/auth/login     | Login dengan username/email + password          |
-| GET    | /api/tv/antrian     | Data antrian hari ini untuk Display TV (non-sensitif, rate-limited 30 req/mnt) |
+| Method | Path | Keterangan |
+|--------|------|------------|
+| POST | /api/auth/login | Login dengan username/email + password |
+| GET | /api/tv/antrian | Data antrian hari ini untuk Display TV (non-sensitif, rate-limited 30 req/mnt) |
 
 ### Terautentikasi (Bearer JWT)
 
-| Method | Path                           | Akses               |
-|--------|--------------------------------|---------------------|
-| GET    | /api/auth/me                   | Semua               |
-| PUT    | /api/auth/profile              | Semua               |
-| POST   | /api/auth/foto-profil          | Semua               |
-| PUT    | /api/auth/change-password      | Semua               |
-| GET    | /api/pasien                    | Semua               |
-| POST   | /api/pasien                    | Admin               |
-| PUT    | /api/pasien/:id                | Admin               |
-| DELETE | /api/pasien/:id                | Admin               |
-| GET    | /api/kunjungan/antrian         | Semua               |
-| POST   | /api/kunjungan                 | Admin, Dokter       |
-| PATCH  | /api/kunjungan/:id/status      | Admin, Dokter       |
-| POST   | /api/rekam-medis               | Admin, Dokter       |
-| GET    | /api/rekam-medis/pasien/:id    | Admin, Dokter       |
-| POST   | /api/resep                     | Admin, Dokter       |
-| GET    | /api/resep/antrian             | Apoteker, Admin     |
-| PATCH  | /api/resep/:id/konfirmasi      | Apoteker            |
-| GET    | /api/obat                      | Semua               |
-| POST   | /api/obat                      | Admin, Apoteker     |
-| PATCH  | /api/obat/:id/stok             | Admin, Apoteker     |
-| GET    | /api/laporan/dashboard         | Semua               |
-| GET    | /api/laporan/kunjungan         | Admin               |
-| GET    | /api/laporan/obat              | Admin, Apoteker     |
-| GET    | /api/users                     | Admin               |
-| POST   | /api/users                     | Admin               |
-| PUT    | /api/users/:id                 | Admin               |
-| PUT    | /api/users/:id/reset-password  | Admin               |
-| DELETE | /api/users/:id                 | Admin               |
-| GET    | /uploads/profil/:filename      | Semua (JWT wajib)   |
+| Method | Path | Akses |
+|--------|------|-------|
+| GET | /api/auth/me | Semua |
+| PUT | /api/auth/profile | Semua |
+| POST | /api/auth/foto-profil | Semua |
+| PUT | /api/auth/change-password | Semua |
+| GET | /api/pasien | Admin, Dokter, Owner |
+| POST | /api/pasien | Admin |
+| PUT | /api/pasien/:id | Admin |
+| DELETE | /api/pasien/:id | Admin |
+| GET | /api/kunjungan/antrian | Semua |
+| POST | /api/kunjungan | Admin, Dokter |
+| PATCH | /api/kunjungan/:id/status | Admin, Dokter |
+| GET | /api/rekam-medis/kunjungan/:id | Dokter, Admin, Owner |
+| GET | /api/rekam-medis/pasien/:id | Dokter, Admin, Owner |
+| POST | /api/rekam-medis | **Dokter saja** |
+| PUT | /api/rekam-medis/:id | **Dokter saja** |
+| POST | /api/resep | Dokter |
+| GET | /api/resep/antrian | Apoteker, Admin |
+| PATCH | /api/resep/:id/konfirmasi | Apoteker |
+| GET | /api/obat | Semua |
+| POST | /api/obat | Admin, Apoteker |
+| PATCH | /api/obat/:id/stok | Admin, Apoteker |
+| GET | /api/laporan/dashboard | Semua |
+| GET | /api/laporan/kunjungan | Admin, Owner |
+| GET | /api/laporan/obat | Admin, Apoteker, Owner |
+| GET | /api/users | Owner |
+| POST | /api/users | Owner |
+| PUT | /api/users/:id | Owner |
+| PUT | /api/users/:id/reset-password | Owner |
+| DELETE | /api/users/:id | Owner |
+| PUT | /api/dokter/:id | Owner |
+| DELETE | /api/dokter/:id | Owner |
+| GET | /uploads/profil/:filename | Semua (JWT wajib) |
 
 ---
 
@@ -373,6 +445,10 @@ Klinik/
 - **Foto profil (tampilan)** — diambil via axios+Bearer (bukan `<img src>` langsung), blob URL di-cache in-memory
 - **Logo** — WebP 19 KB dioptimasi dari PNG 228 KB; file asli ada di `frontend/scripts/raw/`; jalankan `node scripts/optimize-images.js` dari folder `frontend/` untuk regenerasi
 - **Display TV** — buka `http://localhost:5173/tv` atau klik tombol **Tampilkan Display TV** di Dashboard; tidak perlu login; cocok di-fullscreen di monitor ruang tunggu
+- **Pasien siswa** — kelas wajib diisi; NIS opsional; kontak wali disarankan untuk siswa
+- **Pasien umum** — NIK opsional (16 digit); field kelas tidak wajib
+- **Alergi & kondisi khusus** — ditampilkan sebagai banner merah di atas halaman detail pasien; indikator ⚠ di tabel list
+- **Rekam medis** — hanya dokter yang bisa membuat dan mengubah; owner & admin hanya bisa melihat
 - **Laporan** — rentang tanggal wajib diisi, maksimal 3 bulan (92 hari) per request
 - **Health check** — `GET /api/health` — respons minimal `OK` di production
 
@@ -391,12 +467,14 @@ Klinik/
 
 ### Perubahan pasca-audit
 
-| Versi | Perubahan |
-|-------|-----------|
-| Post-audit | Optimasi gambar: logo.png (228 KB) → logo.webp (19 KB) via Sharp; favicon 64×64 px terpisah; `<link rel="preload">` logo WebP |
-| Post-audit | Fix foto profil broken: `useAuthedImage` hook — fetch dengan Bearer token, cache blob URL in-memory, `invalidateAuthedImage` saat upload baru |
-| Post-audit | Fix login tidak menyertakan `foto_profil` di response; `updateProfile` RETURNING `foto_profil` |
-| Post-audit | **Display TV Antrian**: halaman publik `/tv`, endpoint `GET /api/tv/antrian`, tombol di Dashboard — polling 15 detik, highlight status, jam realtime |
+| Perubahan | Detail |
+|-----------|--------|
+| Optimasi gambar | logo.png (228 KB) → logo.webp (19 KB) via Sharp; favicon 64×64 px; `<link rel="preload">` |
+| Fix foto profil broken | `useAuthedImage` hook — fetch Bearer token, cache blob URL, invalidate saat upload baru |
+| Fix login response | `foto_profil` disertakan di response login & updateProfile |
+| Display TV Antrian | Halaman publik `/tv`, endpoint `GET /api/tv/antrian`, tombol di Dashboard |
+| **Role Owner & Kasir** | Tambah 2 role baru; manajemen user & dokter pindah ke Owner; rekam medis diperketat hanya Dokter |
+| **Extend data pasien** | Dua jenis pasien (siswa/umum); field NIS, NIK, kontak wali, alergi, kondisi khusus; migration additive (data lama aman) |
 
 ---
 

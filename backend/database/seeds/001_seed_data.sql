@@ -10,6 +10,7 @@ ALTER SEQUENCE IF EXISTS kode_obat_seq RESTART WITH 11;
 -- ── Users ────────────────────────────────────────────────────
 -- Hash bcrypt (cost 12) dari "Password123!" — digenerate ulang agar valid
 INSERT INTO users (nama, username, password, role, email, aktif) VALUES
+  ('Yuwatsiqul Aqwam',    'owner',     '$2a$12$UB9qnnoFxB0yMlTM6.WPG./0H4dY9g.MCs1qHut.gEac3XYkaq1MC', 'owner',    'owner@klinik.sch.id',       TRUE),
   ('Yuwatsiqul Aqwam',    'admin',     '$2a$12$UB9qnnoFxB0yMlTM6.WPG./0H4dY9g.MCs1qHut.gEac3XYkaq1MC', 'admin',    'admin@klinik.sch.id',       TRUE),
   ('dr. Siti Rahayu',      'dokter1',   '$2a$12$UB9qnnoFxB0yMlTM6.WPG./0H4dY9g.MCs1qHut.gEac3XYkaq1MC', 'dokter',   'siti.rahayu@klinik.sch.id', TRUE),
   ('dr. Budi Santoso',     'dokter2',   '$2a$12$UB9qnnoFxB0yMlTM6.WPG./0H4dY9g.MCs1qHut.gEac3XYkaq1MC', 'dokter',   'budi.santoso@klinik.sch.id',TRUE),

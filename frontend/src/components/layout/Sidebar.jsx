@@ -3,28 +3,32 @@ import { useAuth } from '../../contexts/AuthContext';
 import useAuthedImage from '../../hooks/useAuthedImage';
 import {
   LayoutDashboard, Users, UserCog, Stethoscope, ClipboardList,
-  FlaskConical, Package, FileBarChart, History,
+  FlaskConical, Package, FileBarChart, History, Receipt, CreditCard, Tags,
 } from 'lucide-react';
 
 const ICON_W = 64;
 
 const NAV = {
   owner: [
-    { to: '/dashboard',      Icon: LayoutDashboard, label: 'Dashboard'      },
-    { to: '/dokter',         Icon: Stethoscope,     label: 'Data dokter'    },
-    { to: '/users',          Icon: UserCog,         label: 'Manajemen user' },
-    { to: '/laporan',        Icon: FileBarChart,    label: 'Laporan'        },
-    { to: '/antrian',        Icon: ClipboardList,   label: 'Antrian pasien' },
-    { to: '/pasien-riwayat', Icon: History,         label: 'Riwayat pasien' },
-    { to: '/pasien',         Icon: Users,           label: 'Data pasien'    },
+    { to: '/dashboard',         Icon: LayoutDashboard, label: 'Dashboard'          },
+    { to: '/dokter',            Icon: Stethoscope,     label: 'Data dokter'        },
+    { to: '/users',             Icon: UserCog,         label: 'Manajemen user'     },
+    { to: '/laporan',           Icon: FileBarChart,    label: 'Laporan'            },
+    { to: '/tarif',             Icon: Tags,            label: 'Tarif layanan'      },
+    { to: '/riwayat-transaksi', Icon: Receipt,         label: 'Riwayat transaksi'  },
+    { to: '/antrian',           Icon: ClipboardList,   label: 'Antrian pasien'     },
+    { to: '/pasien-riwayat',    Icon: History,         label: 'Riwayat pasien'     },
+    { to: '/pasien',            Icon: Users,           label: 'Data pasien'        },
   ],
   admin: [
-    { to: '/dashboard', Icon: LayoutDashboard, label: 'Dashboard'      },
-    { to: '/pasien',    Icon: Users,            label: 'Data pasien'    },
-    { to: '/kunjungan', Icon: ClipboardList,    label: 'Kunjungan'      },
-    { to: '/laporan',   Icon: FileBarChart,     label: 'Laporan'        },
-    { to: '/antrian-resep', Icon: FlaskConical, label: 'Antrian resep'  },
-    { to: '/obat',      Icon: Package,          label: 'Data obat'      },
+    { to: '/dashboard',         Icon: LayoutDashboard, label: 'Dashboard'          },
+    { to: '/pasien',            Icon: Users,           label: 'Data pasien'        },
+    { to: '/kunjungan',         Icon: ClipboardList,   label: 'Kunjungan'          },
+    { to: '/laporan',           Icon: FileBarChart,    label: 'Laporan'            },
+    { to: '/antrian-resep',     Icon: FlaskConical,    label: 'Antrian resep'      },
+    { to: '/obat',              Icon: Package,         label: 'Data obat'          },
+    { to: '/kasir/antrian',     Icon: CreditCard,      label: 'Antrian kasir'      },
+    { to: '/riwayat-transaksi', Icon: Receipt,         label: 'Riwayat transaksi'  },
   ],
   dokter: [
     { to: '/dashboard',      Icon: LayoutDashboard, label: 'Dashboard'      },
@@ -38,7 +42,8 @@ const NAV = {
     { to: '/obat',          Icon: Package,         label: 'Data obat'     },
   ],
   kasir: [
-    { to: '/dashboard', Icon: LayoutDashboard, label: 'Dashboard' },
+    { to: '/dashboard',     Icon: LayoutDashboard, label: 'Dashboard'     },
+    { to: '/kasir/antrian', Icon: CreditCard,      label: 'Antrian kasir' },
   ],
 };
 

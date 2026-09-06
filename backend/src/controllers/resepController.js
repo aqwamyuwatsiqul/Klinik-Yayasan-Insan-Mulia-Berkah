@@ -154,12 +154,13 @@ const konfirmasi = async (req, res) => {
         throw Object.assign(new Error('Resep sudah diproses atau dibatalkan'), { statusCode: 400 });
 
       const items = (await client.query(
-        'SELECT obat_id, jumlah FROM resep_item WHERE resep_id=$1', [resepId]
+        'SELECT ri.obat_id, ri.jumlah, o.harga FROM resep_item ri JOIN obat o ON ri.obat_id = o.id WHERE ri.resep_id=$1',
+        [resepId]
       )).rows;
 
       for (const item of items) {
         const obat = (await client.query(
-          'SELECT id, stok, nama FROM obat WHERE id=$1 AND deleted_at IS NULL FOR UPDATE',
+          'SELECT id, stok, nama, harga FROM obat WHERE id=$1 AND deleted_at IS NULL FOR UPDATE',
           [item.obat_id]
         )).rows[0];
         if (!obat) throw Object.assign(new Error('Data obat tidak ditemukan'), { statusCode: 404 });
@@ -168,14 +169,18 @@ const konfirmasi = async (req, res) => {
             new Error(`Stok ${obat.nama} tidak cukup (tersisa: ${obat.stok})`),
             { statusCode: 400 }
           );
-        // nilai stok sudah kita punya dari SELECT FOR UPDATE di atas —
-        // tidak perlu SELECT ulang sebelum UPDATE (hemat 1 query/item)
         const stokSesudah = obat.stok - item.jumlah;
         await client.query('UPDATE obat SET stok=$1 WHERE id=$2', [stokSesudah, item.obat_id]);
         await client.query(
           `INSERT INTO stok_log(obat_id,tipe,jumlah,stok_sebelum,stok_sesudah,referensi_id,referensi_tipe,keterangan,user_id)
            VALUES($1,'keluar',$2,$3,$4,$5,'resep','Penyerahan resep',$6)`,
           [item.obat_id, item.jumlah, obat.stok, stokSesudah, resepId, req.user.id]
+        );
+        // Simpan snapshot harga saat konfirmasi — data historis tidak berubah
+        // jika harga obat direvisi di masa mendatang
+        await client.query(
+          'UPDATE resep_item SET harga_satuan=$1 WHERE resep_id=$2 AND obat_id=$3',
+          [obat.harga, resepId, item.obat_id]
         );
       }
 
@@ -185,7 +190,13 @@ const konfirmasi = async (req, res) => {
         [req.user.id, resepId]
       )).rows[0];
 
-      await client.query(`UPDATE kunjungan SET status='selesai' WHERE id=$1`, [resep.kunjungan_id]);
+      // Status kunjungan → 'menunggu_bayar' (bukan 'selesai')
+      // Kasir yang akan mengubah ke 'selesai' setelah pembayaran diterima
+      await client.query(
+        "UPDATE kunjungan SET status='menunggu_bayar' WHERE id=$1",
+        [resep.kunjungan_id]
+      );
+
       return result;
     });
 

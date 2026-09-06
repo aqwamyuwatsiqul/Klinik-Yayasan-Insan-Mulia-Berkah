@@ -30,6 +30,8 @@ const Pengaturan    = lazy(() => import('./pages/Pengaturan'));
 const Dokter        = lazy(() => import('./pages/admin/Dokter'));
 const Users         = lazy(() => import('./pages/admin/Users'));
 const Laporan       = lazy(() => import('./pages/admin/Laporan')); // berat karena jsPDF
+const TarifLayanan  = lazy(() => import('./pages/owner/TarifLayanan'));
+const RiwayatTransaksi = lazy(() => import('./pages/owner/RiwayatTransaksi'));
 
 // Admin — operasional harian
 const Pasien        = lazy(() => import('./pages/admin/Pasien'));
@@ -42,6 +44,10 @@ const RiwayatPasien = lazy(() => import('./pages/dokter/RiwayatPasien'));
 // Apoteker
 const AntrianResep  = lazy(() => import('./pages/apoteker/AntrianResep'));
 const Obat          = lazy(() => import('./pages/apoteker/Obat'));
+
+// Kasir
+const AntrianKasir  = lazy(() => import('./pages/kasir/AntrianKasir'));
+const ProsesBayar   = lazy(() => import('./pages/kasir/ProsesBayar'));
 
 // ── Fallback saat lazy chunk sedang loading ────────────────────────────────
 function PageLoader() {
@@ -158,6 +164,14 @@ export default function App() {
                 {/* Apoteker */}
                 <Route path="/antrian-resep" element={<RoleGuard roles={['apoteker', 'admin']}><AntrianResep /></RoleGuard>} />
                 <Route path="/obat"          element={<RoleGuard roles={['apoteker', 'admin']}><Obat /></RoleGuard>} />
+
+                {/* Owner — master data & laporan */}
+                <Route path="/tarif"              element={<RoleGuard roles={['owner','admin']}><TarifLayanan /></RoleGuard>} />
+                <Route path="/riwayat-transaksi"  element={<RoleGuard roles={['owner','admin']}><RiwayatTransaksi /></RoleGuard>} />
+
+                {/* Kasir */}
+                <Route path="/kasir/antrian"      element={<RoleGuard roles={['kasir','admin','owner']}><AntrianKasir /></RoleGuard>} />
+                <Route path="/kasir/proses/:kunjunganId" element={<RoleGuard roles={['kasir','admin']}><ProsesBayar /></RoleGuard>} />
               </Route>
 
               <Route path="*" element={<Navigate to="/dashboard" replace />} />

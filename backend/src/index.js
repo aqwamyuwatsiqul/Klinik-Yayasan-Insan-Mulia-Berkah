@@ -214,6 +214,8 @@ app.use('/api/rekam-medis', require('./routes/rekamMedis'));
 app.use('/api/resep',       require('./routes/resep'));
 app.use('/api/obat',        require('./routes/obat'));
 app.use('/api/laporan',     require('./routes/laporan'));
+app.use('/api/tarif',       require('./routes/tarif'));
+app.use('/api/pembayaran',  require('./routes/pembayaran'));
 
 // ── Health check ───────────────────────────────────────────────────────────
 // L4 FIX: Di production, kembalikan respons minimal (tidak bocorkan timestamp

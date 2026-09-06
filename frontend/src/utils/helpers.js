@@ -56,10 +56,11 @@ export const formatCurrency = (v) =>
 // ── Status label ───────────────────────────────────────────────────────────
 export const statusKunjunganLabel = (s) =>
   ({
-    menunggu  : { label: 'Menunggu',  cls: 'badge badge-yellow' },
-    diperiksa : { label: 'Diperiksa', cls: 'badge badge-blue'   },
-    selesai   : { label: 'Selesai',   cls: 'badge badge-green'  },
-    batal     : { label: 'Batal',     cls: 'badge badge-red'    },
+    menunggu      : { label: 'Menunggu',       cls: 'badge badge-yellow' },
+    diperiksa     : { label: 'Diperiksa',      cls: 'badge badge-blue'   },
+    menunggu_bayar: { label: 'Menunggu Bayar', cls: 'badge badge-red'    },
+    selesai       : { label: 'Selesai',        cls: 'badge badge-green'  },
+    batal         : { label: 'Batal',          cls: 'badge badge-gray'   },
   }[s] || { label: s || '-', cls: 'badge badge-gray' });
 
 export const statusResepLabel = (s) =>
@@ -68,6 +69,12 @@ export const statusResepLabel = (s) =>
     diproses : { label: 'Diproses', cls: 'badge badge-blue'   },
     selesai  : { label: 'Selesai',  cls: 'badge badge-green'  },
     batal    : { label: 'Batal',    cls: 'badge badge-red'    },
+  }[s] || { label: s || '-', cls: 'badge badge-gray' });
+
+export const statusPembayaranLabel = (s) =>
+  ({
+    lunas : { label: 'Lunas', cls: 'badge badge-green'  },
+    void  : { label: 'Void',  cls: 'badge badge-red'    },
   }[s] || { label: s || '-', cls: 'badge badge-gray' });
 
 // ── Role label ─────────────────────────────────────────────────────────────

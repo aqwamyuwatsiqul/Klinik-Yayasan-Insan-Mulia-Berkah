@@ -134,6 +134,69 @@ const updateStatus = async (req, res) => {
 
 module.exports = { getAntrian, getById, create, updateStatus };
 
+// ── Selesaikan kunjungan tanpa resep → menunggu_bayar ─────────────────────
+// Dipanggil dokter/admin setelah pemeriksaan selesai tapi tidak ada resep.
+// Body: { tarif_ids: [1, 2, ...] } — tarif yang dipilih dokter.
+const { withTransaction } = require('../utils/db');
+
+const selesaikanKunjungan = async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    if (isNaN(id)) return badRequest(res, 'ID kunjungan tidak valid');
+
+    const { tarif_ids } = req.body;
+    // tarif_ids boleh kosong (array kosong = tidak ada tarif tambahan)
+    if (!Array.isArray(tarif_ids))
+      return badRequest(res, 'tarif_ids harus berupa array');
+
+    await withTransaction(pool, async (client) => {
+      const kj = (await client.query(
+        'SELECT id, status, pasien_id FROM kunjungan WHERE id=$1 AND deleted_at IS NULL FOR UPDATE', [id]
+      )).rows[0];
+      if (!kj) throw Object.assign(new Error('Kunjungan tidak ditemukan'), { statusCode: 404 });
+      if (kj.status !== 'diperiksa')
+        throw Object.assign(
+          new Error(`Kunjungan harus berstatus 'diperiksa', saat ini: '${kj.status}'`),
+          { statusCode: 400 }
+        );
+
+      // Validasi semua tarif_id ada dan aktif
+      for (const tid of tarif_ids) {
+        const tarif = (await client.query(
+          'SELECT id FROM tarif_layanan WHERE id=$1 AND aktif=TRUE AND deleted_at IS NULL', [parseInt(tid)]
+        )).rows[0];
+        if (!tarif) throw Object.assign(new Error(`Tarif ID ${tid} tidak ditemukan atau tidak aktif`), { statusCode: 400 });
+      }
+
+      await client.query(
+        "UPDATE kunjungan SET status='menunggu_bayar' WHERE id=$1", [id]
+      );
+    });
+
+    // Ambil kunjungan yang sudah diupdate beserta tarif yang dipilih
+    const kj = (await pool.query(
+      `SELECT k.id, k.status, k.pasien_id, p.nama AS nama_pasien, p.jenis_pasien
+       FROM kunjungan k JOIN pasien p ON k.pasien_id = p.id
+       WHERE k.id=$1`, [id]
+    )).rows[0];
+
+    // Ambil detail tarif yang dipilih (untuk dikembalikan ke frontend)
+    const tarifDipilih = tarif_ids.length
+      ? (await pool.query(
+          'SELECT id, nama, harga FROM tarif_layanan WHERE id=ANY($1)', [tarif_ids]
+        )).rows
+      : [];
+
+    return success(res, { kunjungan: kj, tarif_dipilih: tarifDipilih },
+      'Kunjungan selesai, menunggu pembayaran');
+  } catch (err) {
+    if (err.statusCode === 404) return notFound(res, err.message);
+    if (err.statusCode === 400) return badRequest(res, err.message);
+    logger.error({ err, userId: req.user?.id }, 'kunjunganController.selesaikanKunjungan');
+    return res.status(500).json({ success: false, message: 'Terjadi kesalahan server' });
+  }
+};
+
 // ── Display TV: antrian publik hari ini (tanpa auth) ──────────────────────
 // Endpoint ini sengaja tidak memerlukan JWT karena diakses dari TV/layar
 // umum di ruang tunggu yang tidak punya session login.
@@ -178,4 +241,4 @@ const getAntrianPublik = async (req, res) => {
   }
 };
 
-module.exports = { getAntrian, getById, create, updateStatus, getAntrianPublik };
+module.exports = { getAntrian, getById, create, updateStatus, getAntrianPublik, selesaikanKunjungan };

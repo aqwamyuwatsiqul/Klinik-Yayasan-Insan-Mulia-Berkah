@@ -35,6 +35,7 @@ export const kunjunganAPI = {
   getById:      (id) => api.get(`/kunjungan/${id}`),
   create:       (d)  => api.post('/kunjungan', d),
   updateStatus: (id,d) => api.patch(`/kunjungan/${id}/status`, d),
+  selesaikan:   (id,d) => api.patch(`/kunjungan/${id}/selesaikan`, d),
 };
 export const rekamMedisAPI = {
   getByKunjungan: (id)   => api.get(`/rekam-medis/kunjungan/${id}`),
@@ -60,4 +61,20 @@ export const laporanAPI = {
   getDashboard:        ()  => api.get('/laporan/dashboard'),
   getLaporanKunjungan: (p) => api.get('/laporan/kunjungan', { params: p }),
   getLaporanObat:      (p) => api.get('/laporan/obat', { params: p }),
+};
+
+export const tarifAPI = {
+  getAll:  (p)    => api.get('/tarif', { params: p }),
+  getById: (id)   => api.get(`/tarif/${id}`),
+  create:  (d)    => api.post('/tarif', d),
+  update:  (id,d) => api.put(`/tarif/${id}`, d),
+  remove:  (id)   => api.delete(`/tarif/${id}`),
+};
+export const pembayaranAPI = {
+  getAntrian:      (p)           => api.get('/pembayaran/antrian', { params: p }),
+  getPreview:      (kunjunganId) => api.get(`/pembayaran/preview/${kunjunganId}`),
+  getRiwayat:      (p)           => api.get('/pembayaran/riwayat', { params: p }),
+  getById:         (id)          => api.get(`/pembayaran/${id}`),
+  proses:          (kunjunganId, d) => api.post(`/pembayaran/kunjungan/${kunjunganId}`, d),
+  void:            (id, d)       => api.patch(`/pembayaran/${id}/void`, d),
 };
