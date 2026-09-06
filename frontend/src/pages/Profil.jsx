@@ -133,11 +133,11 @@ export default function Profil() {
   const [saving,   setSaving  ] = useState(false);
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm({
-    defaultValues: { nama: user?.nama || '', email: user?.email || '' },
+    defaultValues: { nama: user?.nama || '', email: user?.email || '', username: user?.username || '' },
   });
 
   useEffect(() => {
-    reset({ nama: user?.nama || '', email: user?.email || '' });
+    reset({ nama: user?.nama || '', email: user?.email || '', username: user?.username || '' });
   }, [user, reset]);
 
   // Dipanggil setelah foto berhasil diupload
@@ -153,7 +153,7 @@ export default function Profil() {
       const updated = res.data.data;
       const merged  = { ...user, ...updated };
       setUser(merged);
-      reset({ nama: merged.nama || '', email: merged.email || '' });
+      reset({ nama: merged.nama || '', email: merged.email || '', username: merged.username || '' });
       toast.success('Profil berhasil diperbarui');
       setEditMode(false);
     } catch (err) {
@@ -165,7 +165,7 @@ export default function Profil() {
 
   const handleBatal = () => {
     setEditMode(false);
-    reset({ nama: user?.nama || '', email: user?.email || '' });
+    reset({ nama: user?.nama || '', email: user?.email || '', username: user?.username || '' });
   };
 
   const infoItems = [
@@ -218,6 +218,29 @@ export default function Profil() {
               />
               {errors.nama && (
                 <p className="text-xs text-status-danger mt-1">{errors.nama.message}</p>
+              )}
+            </div>
+            <div>
+              <label className="label" htmlFor="profil-username">
+                Username
+                <span className="ml-1 text-text-secondary font-normal">(huruf, angka, underscore)</span>
+              </label>
+              <input
+                id="profil-username"
+                className={`input font-mono ${errors.username ? 'input-error' : ''}`}
+                placeholder="contoh: budi_santoso"
+                {...register('username', {
+                  required: 'Username wajib diisi',
+                  minLength: { value: 3, message: 'Minimal 3 karakter' },
+                  maxLength: { value: 50, message: 'Maksimal 50 karakter' },
+                  pattern: {
+                    value: /^[a-zA-Z0-9_]+$/,
+                    message: 'Hanya huruf, angka, dan underscore',
+                  },
+                })}
+              />
+              {errors.username && (
+                <p className="text-xs text-status-danger mt-1">{errors.username.message}</p>
               )}
             </div>
             <div>

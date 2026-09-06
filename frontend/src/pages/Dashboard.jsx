@@ -215,17 +215,24 @@ export default function Dashboard() {
           </div>
           <div className="card-body space-y-3">
             {[
-              { status: 'menunggu',  icon: Clock,         bg: 'bg-status-warning-bg', color: 'text-status-warning'  },
-              { status: 'diperiksa', icon: ClipboardList, bg: 'bg-status-info-bg',    color: 'text-status-info'    },
-              { status: 'selesai',   icon: CheckCircle,   bg: 'bg-status-success-bg', color: 'text-status-success' },
+              { status: 'menunggu',       icon: Clock,         bg: 'bg-status-warning-bg',  color: 'text-status-warning'  },
+              { status: 'diperiksa',      icon: ClipboardList, bg: 'bg-status-info-bg',     color: 'text-status-info'     },
+              { status: 'menunggu_bayar', icon: FlaskConical,  bg: 'bg-status-danger-bg',   color: 'text-status-danger'   },
+              { status: 'selesai',        icon: CheckCircle,   bg: 'bg-status-success-bg',  color: 'text-status-success'  },
             ].map(({ status, icon: Icon, bg, color }) => {
               const row = data?.kunjungan_per_status?.find((r) => r.status === status);
+              const label = {
+                menunggu      : 'Menunggu',
+                diperiksa     : 'Diperiksa',
+                menunggu_bayar: 'Menunggu bayar',
+                selesai       : 'Selesai',
+              }[status];
               return (
                 <div key={status} className="flex items-center gap-3">
                   <div className={`w-9 h-9 rounded-[8px] flex items-center justify-center flex-shrink-0 ${bg}`}>
                     <Icon className={`w-4 h-4 ${color}`} />
                   </div>
-                  <p className="flex-1 text-sm font-medium text-text-primary capitalize">{status}</p>
+                  <p className="flex-1 text-sm font-medium text-text-primary">{label}</p>
                   <span className="text-lg font-bold text-text-primary">{row?.total ?? 0}</span>
                 </div>
               );

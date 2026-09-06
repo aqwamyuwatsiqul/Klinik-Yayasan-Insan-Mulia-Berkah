@@ -69,6 +69,10 @@ export default function RiwayatPasien() {
     queryFn: () =>
       rekamMedisAPI.getByPasien(selected.id, { page: rmPage, limit: 10 }).then((r) => r.data.data),
     enabled: !!selected,
+    // 403 = dokter belum pernah tangani pasien ini — bukan error UI,
+    // cukup tampilkan empty state "belum ada rekam medis"
+    retry: false,
+    meta: { silent: true },
   });
 
   return (

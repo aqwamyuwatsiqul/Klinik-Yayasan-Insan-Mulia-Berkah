@@ -32,7 +32,7 @@ const getAll = async (req, res) => {
     const result = await paginateQuery(
       pool,
       `SELECT id, no_rm, nama, jenis_pasien, tanggal_lahir, jenis_kelamin,
-              alamat, no_telepon, kelas, nis,
+              alamat, no_telepon, kelas, nis, nik,
               -- flag keberadaan info medis kritis — untuk indikator ⚠ di list
               (alergi IS NOT NULL AND alergi <> '')         AS has_alergi,
               (kondisi_khusus IS NOT NULL AND kondisi_khusus <> '') AS has_kondisi,

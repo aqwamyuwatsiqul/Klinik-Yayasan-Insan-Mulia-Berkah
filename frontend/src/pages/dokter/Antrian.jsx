@@ -154,6 +154,9 @@ function PeriksaModal({ open, onClose, kunjungan }) {
     queryFn: () =>
       rekamMedisAPI.getByKunjungan(kunjungan?.id).then((r) => r.data.data).catch(() => null),
     enabled: open && !!kunjungan?.id,
+    // 404 = rekam medis belum diisi — normal, bukan error
+    retry: false,
+    meta: { silent: true },
   });
 
   if (!open) return null;

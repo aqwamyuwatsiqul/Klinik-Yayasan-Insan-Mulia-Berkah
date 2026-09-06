@@ -137,9 +137,27 @@ const changePassword = async (req, res) => {
 
 const updateProfile = async (req, res) => {
   try {
-    const { nama, email } = req.body;
+    const { nama, email, username } = req.body;
     if (!nama || !nama.trim() || nama.trim().length < 2)
       return badRequest(res, 'Nama wajib diisi minimal 2 karakter');
+
+    // Validasi username jika diubah
+    if (username !== undefined) {
+      if (typeof username !== 'string' || !username.trim())
+        return badRequest(res, 'Username tidak valid');
+      const normalizedUsername = username.trim().toLowerCase();
+      if (normalizedUsername.length < 3 || normalizedUsername.length > 50)
+        return badRequest(res, 'Username harus 3–50 karakter');
+      if (!/^[a-zA-Z0-9_]+$/.test(normalizedUsername))
+        return badRequest(res, 'Username hanya boleh huruf, angka, dan underscore');
+      // Cek duplikasi username dengan user lain
+      const dupUsername = await pool.query(
+        'SELECT id FROM users WHERE username=$1 AND id != $2 AND deleted_at IS NULL',
+        [normalizedUsername, req.user.id]
+      );
+      if (dupUsername.rows.length) return badRequest(res, 'Username sudah digunakan akun lain');
+      req.body.username = normalizedUsername; // simpan yang sudah dinormalisasi
+    }
 
     // Validasi format email jika diisi
     if (email) {
@@ -155,11 +173,13 @@ const updateProfile = async (req, res) => {
       if (dup.rows.length) return badRequest(res, 'Email sudah digunakan akun lain');
     }
 
+    const finalUsername = req.body.username ?? req.user.username;
+
     const { rows } = await pool.query(
-      `UPDATE users SET nama=$1, email=$2
-       WHERE id=$3 AND deleted_at IS NULL
+      `UPDATE users SET nama=$1, email=$2, username=$3
+       WHERE id=$4 AND deleted_at IS NULL
        RETURNING id, nama, username, role, email, foto_profil`,
-      [nama.trim(), email || null, req.user.id]
+      [nama.trim(), email || null, finalUsername, req.user.id]
     );
     if (!rows.length) return unauthorized(res, 'User tidak ditemukan');
 

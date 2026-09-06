@@ -17,7 +17,22 @@ function PasienModal({ open, onClose, initial }) {
   const qc     = useQueryClient();
   const isEdit = !!initial;
 
-  const toDateInput = (v) => v ? v.toString().slice(0, 10) : '';
+  // Konversi tanggal dari DB ke format YYYY-MM-DD untuk input type="date".
+  // PostgreSQL DATE dikembalikan sebagai objek Date di tengah malam UTC.
+  // .toString().slice(0,10) akan salah di timezone UTC+N karena konversi ke
+  // waktu lokal bisa menggeser hari. Pakai toISOString() yang selalu UTC.
+  const toDateInput = (v) => {
+    if (!v) return '';
+    // Jika sudah string format YYYY-MM-DD, pakai langsung
+    if (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v)) return v;
+    // Objek Date dari pg driver: ambil komponen UTC agar tidak tergeser timezone
+    const d = new Date(v);
+    if (isNaN(d.getTime())) return '';
+    const yyyy = d.getUTCFullYear();
+    const mm   = String(d.getUTCMonth() + 1).padStart(2, '0');
+    const dd   = String(d.getUTCDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  };
 
   const { register, handleSubmit, watch, reset, formState: { errors } } = useForm({
     defaultValues: {

@@ -67,13 +67,30 @@ function PageLoader() {
 // ── QueryClient dengan global error handler ────────────────────────────────
 const queryClient = new QueryClient({
   defaultOptions: {
-    queries   : { retry: 1, staleTime: 30_000, throwOnError: false },
-    mutations : { throwOnError: false },
+    queries: {
+      // Hanya retry untuk network error atau 5xx — bukan 4xx.
+      // 404 = "belum ada data" dan 403 = "akses ditolak" adalah kondisi
+      // normal yang sudah ditangani UI (EmptyState/pesan error per halaman),
+      // bukan kegagalan yang perlu di-retry.
+      retry: (failureCount, err) => {
+        const status = err?.response?.status;
+        if (status && status < 500) return false;   // 4xx → jangan retry
+        return failureCount < 1;                     // network/5xx → max 1x retry
+      },
+      staleTime  : 30_000,
+      throwOnError: false,
+    },
+    mutations: { throwOnError: false },
   },
   queryCache: new QueryCache({
     onError: (err, query) => {
       if (err?.response?.status === 401) return;
       if (query.meta?.silent) return;
+      // Jangan tampilkan toast untuk 4xx — error ini sudah ditangani
+      // oleh masing-masing halaman (empty state, pesan inline, dsb).
+      // Toast global hanya untuk network error atau 5xx yang tidak terduga.
+      const status = err?.response?.status;
+      if (status && status < 500) return;
       toast.error('Gagal memuat data. Silakan refresh halaman.');
     },
   }),

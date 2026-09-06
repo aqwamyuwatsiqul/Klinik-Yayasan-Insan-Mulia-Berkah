@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
+import { useAuth } from '../contexts/AuthContext';
 import { authAPI } from '../api';
 import { getErrorMessage } from '../utils/helpers';
 import { Lock, Eye, EyeOff, ShieldCheck } from 'lucide-react';
@@ -36,6 +37,7 @@ function PasswordField({ label, id, register: reg, name, rules, error, watch }) 
 }
 
 export default function Pengaturan() {
+  const { user, login } = useAuth();
   const [loading, setLoading] = useState(false);
   const { register, handleSubmit, watch, reset, formState: { errors } } = useForm();
 
@@ -46,6 +48,10 @@ export default function Pengaturan() {
         password_lama: data.password_lama,
         password_baru: data.password_baru,
       });
+      // Re-login otomatis dengan password baru agar token diperbarui.
+      // Tanpa ini, token lama langsung invalid (password_changed_at > iat)
+      // dan request berikutnya (polling notifikasi, dll) akan kena 401 → logout.
+      await login({ username: user.username, password: data.password_baru });
       toast.success('Password berhasil diubah');
       reset();
     } catch (err) {

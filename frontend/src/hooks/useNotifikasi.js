@@ -8,10 +8,11 @@ import dayjs from 'dayjs';
  * - Dokter   : antrian pasien 'menunggu' hari ini
  * - Apoteker : resep dengan status 'menunggu'
  * - Admin    : kunjungan 'menunggu' hari ini
+ * - Owner/Kasir : tidak ada notifikasi operasional
  * Poll setiap 30 detik secara otomatis.
  */
 export function useNotifikasi() {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const role = user?.role;
 
   // ── Dokter & Admin: antrian kunjungan menunggu hari ini ──
@@ -21,9 +22,12 @@ export function useNotifikasi() {
       kunjunganAPI
         .getAntrian({ tanggal: dayjs().format('YYYY-MM-DD'), status: 'menunggu' })
         .then((r) => r.data.data),
-    enabled: role === 'dokter' || role === 'admin',
+    // Tunggu sampai auth selesai verifikasi token (loading=false)
+    // dan hanya aktif untuk role yang relevan
+    enabled: !loading && (role === 'dokter' || role === 'admin'),
     refetchInterval: 30_000,
     staleTime: 0,
+    meta: { silent: true },
   });
 
   // ── Apoteker: resep menunggu diserahkan ──
@@ -33,9 +37,10 @@ export function useNotifikasi() {
       resepAPI
         .getAntrian({ status: 'menunggu', limit: 20 })
         .then((r) => r.data.data),
-    enabled: role === 'apoteker',
+    enabled: !loading && role === 'apoteker',
     refetchInterval: 30_000,
     staleTime: 0,
+    meta: { silent: true },
   });
 
   if (role === 'dokter' || role === 'admin') {
@@ -62,5 +67,6 @@ export function useNotifikasi() {
     return { items, count: items.length };
   }
 
+  // owner, kasir, dan role lain: tidak ada notifikasi operasional
   return { items: [], count: 0 };
 }

@@ -18,15 +18,23 @@ INSERT INTO users (nama, username, password, role, email, aktif) VALUES
 ON CONFLICT (username) DO NOTHING;
 
 -- ── Dokter ───────────────────────────────────────────────────
+-- Guard WHERE NOT EXISTS: karena tabel dokter tidak punya UNIQUE
+-- constraint yang bisa ditangkap ON CONFLICT, kita cegah duplikasi
+-- secara eksplisit. Dengan adanya idx_dokter_user_id_unique (migration 006),
+-- INSERT juga akan ditolak oleh DB jika ada yang lolos guard ini.
 INSERT INTO dokter (user_id, nama, spesialisasi, no_sip, telepon, aktif)
 SELECT u.id, 'dr. Siti Rahayu', 'Dokter Umum', 'SIP/001/2024', '081234567890', TRUE
 FROM users u WHERE u.username = 'dokter1'
-ON CONFLICT DO NOTHING;
+  AND NOT EXISTS (
+    SELECT 1 FROM dokter WHERE user_id = u.id AND deleted_at IS NULL
+  );
 
 INSERT INTO dokter (user_id, nama, spesialisasi, no_sip, telepon, aktif)
 SELECT u.id, 'dr. Budi Santoso', 'Dokter Umum', 'SIP/002/2024', '081234567891', TRUE
 FROM users u WHERE u.username = 'dokter2'
-ON CONFLICT DO NOTHING;
+  AND NOT EXISTS (
+    SELECT 1 FROM dokter WHERE user_id = u.id AND deleted_at IS NULL
+  );
 
 -- ── Pasien ───────────────────────────────────────────────────
 INSERT INTO pasien (no_rm, nama, tanggal_lahir, jenis_kelamin, alamat, no_telepon, kelas) VALUES
