@@ -164,10 +164,10 @@ export default function RiwayatTransaksi() {
   const [page,      setPage     ] = useState(1);
   const [modal,     setModal    ] = useState(null); // { type: 'detail'|'void', id }
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isFetching } = useQuery({
     queryKey: ['riwayat-transaksi', filter, page],
     queryFn: () => pembayaranAPI.getRiwayat({ ...filter, page, limit: 15 }).then(r => r.data.data),
-    keepPreviousData: true,
+    keepPreviousData: true,   // tabel tidak flash, tapi summary bisa stale sejenak
   });
 
   const summary = data?.summary || {};
@@ -181,7 +181,7 @@ export default function RiwayatTransaksi() {
           { label: 'Total pendapatan', value: formatCurrency(summary.total_pendapatan ?? 0), sub: 'periode terpilih' },
           { label: 'Transaksi void',  value: summary.total_void ?? 0, sub: 'dibatalkan' },
         ].map(({ label, value, sub }) => (
-          <div key={label} className="card p-4">
+          <div key={label} className={`card p-4 transition-opacity ${isFetching ? 'opacity-60' : ''}`}>
             <p className="text-2xl font-bold text-text-primary">{value}</p>
             <p className="text-sm font-medium text-text-secondary mt-0.5">{label}</p>
             <p className="text-xs text-text-secondary">{sub}</p>

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { pembayaranAPI, tarifAPI } from '../../api';
@@ -16,6 +16,10 @@ export default function ProsesBayar() {
   const [catatan,        setCatatan       ] = useState('');
   // Tarif tambahan yang dipilih kasir
   const [tarifDipilih,   setTarifDipilih  ] = useState([]);
+  // Flag agar auto-fill tarif dokter hanya berjalan sekali saat preview pertama dimuat.
+  // Tanpa ini, jika kasir sengaja mengosongkan semua tarif lalu preview re-fetch,
+  // tarif dokter akan otomatis muncul kembali — mengabaikan keputusan kasir.
+  const initializedRef = useRef(false);
 
   // Preview tagihan dari server (item obat + info kunjungan)
   const { data: preview, isLoading: loadingPreview, isError } = useQuery({
@@ -24,10 +28,11 @@ export default function ProsesBayar() {
     retry: false,
   });
 
-  // Auto-fill tarif yang sudah dipilih dokter begitu preview dimuat
+  // Auto-fill tarif yang sudah dipilih dokter begitu preview dimuat — hanya sekali
   useEffect(() => {
-    if (preview?.tarif_disarankan?.length && tarifDipilih.length === 0) {
+    if (!initializedRef.current && preview?.tarif_disarankan?.length) {
       setTarifDipilih(preview.tarif_disarankan);
+      initializedRef.current = true;
     }
   }, [preview]);
 
@@ -152,6 +157,9 @@ export default function ProsesBayar() {
                 <div key={t.id} className="flex justify-between items-center py-1.5 text-sm">
                   <div className="flex items-center gap-2">
                     <span className="font-medium text-text-primary">{t.nama}</span>
+                    {t.masih_berlaku === false && (
+                      <span className="text-xs text-status-danger font-medium">(sudah dihapus, akan gagal jika disimpan)</span>
+                    )}
                     <button onClick={() => toggleTarif(t)} className="p-0.5 text-status-danger hover:bg-status-danger-bg rounded">
                       <Trash2 className="w-3 h-3" />
                     </button>

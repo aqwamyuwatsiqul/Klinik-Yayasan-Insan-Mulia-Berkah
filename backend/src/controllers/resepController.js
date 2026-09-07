@@ -57,8 +57,10 @@ const getById = async (req, res) => {
     }
 
     const items = (await pool.query(
-      `SELECT ri.*, o.kode_obat, o.nama AS nama_obat, o.satuan, o.stok
-       FROM resep_item ri JOIN obat o ON ri.obat_id = o.id
+      `SELECT ri.*, o.kode_obat, o.nama AS nama_obat, o.satuan, o.stok,
+              o.deleted_at IS NOT NULL AS obat_dihapus
+       FROM resep_item ri
+       LEFT JOIN obat o ON ri.obat_id = o.id
        WHERE ri.resep_id = $1`, [id]
     )).rows;
     return success(res, { ...resep, items });

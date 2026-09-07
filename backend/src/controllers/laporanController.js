@@ -155,7 +155,7 @@ const getLaporanKunjungan = async (req, res) => {
     if (diffDays > 92)
       return badRequest(res, 'Rentang laporan maksimal 3 bulan (92 hari)');
 
-    const validStatus = ['menunggu', 'diperiksa', 'selesai', 'batal'];
+    const validStatus = ['menunggu', 'diperiksa', 'menunggu_bayar', 'selesai', 'batal'];
     if (status && !validStatus.includes(status))
       return badRequest(res, 'Status tidak valid');
 
@@ -173,7 +173,8 @@ const getLaporanKunjungan = async (req, res) => {
 
     const where = 'WHERE ' + conditions.join(' AND ');
     const { rows } = await pool.query(
-      `SELECT k.id, k.tanggal, k.waktu_daftar, k.status, k.keluhan,
+      `SELECT DISTINCT ON (k.id)
+              k.id, k.tanggal, k.waktu_daftar, k.status, k.keluhan,
               p.no_rm, p.nama AS nama_pasien, p.jenis_kelamin, p.kelas,
               d.nama AS nama_dokter, rm.diagnosa,
               r.id AS resep_id, r.status AS status_resep
@@ -183,11 +184,18 @@ const getLaporanKunjungan = async (req, res) => {
        LEFT JOIN rekam_medis rm ON rm.kunjungan_id = k.id
        LEFT JOIN resep r ON r.kunjungan_id = k.id AND r.deleted_at IS NULL
        ${where}
-       ORDER BY k.tanggal DESC, k.waktu_daftar DESC`,
+       ORDER BY k.id, k.tanggal DESC, k.waktu_daftar DESC`,
       params
     );
 
-    const ringkasan = { total: rows.length, selesai: 0, menunggu: 0, diperiksa: 0, batal: 0 };
+    const ringkasan = {
+      total         : rows.length,
+      selesai       : 0,
+      menunggu      : 0,
+      diperiksa     : 0,
+      menunggu_bayar: 0,
+      batal         : 0,
+    };
     rows.forEach((r) => { if (ringkasan[r.status] !== undefined) ringkasan[r.status]++; });
     return success(res, { data: rows, ringkasan });
   } catch (err) {

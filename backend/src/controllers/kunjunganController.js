@@ -22,10 +22,13 @@ const getAntrian = async (req, res) => {
       const dr = await pool.query(
         'SELECT id FROM dokter WHERE user_id=$1 AND deleted_at IS NULL', [req.user.id]
       );
-      if (dr.rows.length) {
-        params.push(dr.rows[0].id);
-        where += ` AND k.dokter_id=$${params.length}`;
+      if (!dr.rows.length) {
+        // Profil dokter sudah dihapus (atau tidak pernah ada) tapi akun
+        // masih bisa login — jangan tampilkan data siapa pun.
+        return success(res, []);
       }
+      params.push(dr.rows[0].id);
+      where += ` AND k.dokter_id=$${params.length}`;
     } else if (dokter_id) {
       const dId = parseInt(dokter_id);
       if (!isNaN(dId)) { params.push(dId); where += ` AND k.dokter_id=$${params.length}`; }
@@ -166,10 +169,11 @@ const selesaikanKunjungan = async (req, res) => {
       }
 
       // Simpan pilihan tarif dokter ke tabel kunjungan_tarif agar kasir bisa
-      // mengambilnya otomatis saat membuka halaman proses pembayaran
+      // mengambilnya otomatis saat membuka halaman proses pembayaran.
+      // ON CONFLICT DO NOTHING mencegah duplikasi jika endpoint dipanggil ulang.
       for (const tid of tarif_ids) {
         await client.query(
-          'INSERT INTO kunjungan_tarif(kunjungan_id, tarif_id, dipilih_oleh) VALUES($1,$2,$3)',
+          'INSERT INTO kunjungan_tarif(kunjungan_id, tarif_id, dipilih_oleh) VALUES($1,$2,$3) ON CONFLICT DO NOTHING',
           [id, parseInt(tid), req.user.id]
         );
       }
@@ -227,17 +231,18 @@ const getAntrianPublik = async (req, res) => {
        LEFT JOIN dokter d ON k.dokter_id = d.id
        WHERE k.tanggal = $1
          AND k.deleted_at IS NULL
-         AND k.status IN ('menunggu', 'diperiksa', 'selesai')
+         AND k.status IN ('menunggu', 'diperiksa', 'menunggu_bayar', 'selesai')
        ORDER BY k.waktu_daftar ASC`,
       [today]
     );
 
     // Hitung ringkasan
     const summary = {
-      menunggu:  rows.filter((r) => r.status === 'menunggu').length,
-      diperiksa: rows.filter((r) => r.status === 'diperiksa').length,
-      selesai:   rows.filter((r) => r.status === 'selesai').length,
-      total:     rows.length,
+      menunggu      : rows.filter((r) => r.status === 'menunggu').length,
+      diperiksa     : rows.filter((r) => r.status === 'diperiksa').length,
+      menunggu_bayar: rows.filter((r) => r.status === 'menunggu_bayar').length,
+      selesai       : rows.filter((r) => r.status === 'selesai').length,
+      total         : rows.length,
     };
 
     return success(res, { summary, antrian: rows });

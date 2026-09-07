@@ -95,6 +95,9 @@ const create = async (req, res) => {
 
     return created(res, user, 'User berhasil dibuat');
   } catch (err) {
+    if (err.code === '23505') {
+      return badRequest(res, 'Username atau email sudah digunakan');
+    }
     logger.error({ err, userId: req.user?.id }, 'userController.create');
     return res.status(500).json({ success: false, message: 'Terjadi kesalahan server' });
   }
@@ -152,13 +155,30 @@ const remove = async (req, res) => {
     if (isNaN(id)) return badRequest(res, 'ID user tidak valid');
     if (id === req.user.id) return badRequest(res, 'Tidak dapat menghapus akun sendiri');
 
-    const { rows } = await pool.query(
-      'UPDATE users SET deleted_at=NOW(), aktif=FALSE WHERE id=$1 AND deleted_at IS NULL RETURNING id',
-      [id]
-    );
-    if (!rows.length) return notFound(res);
+    await withTransaction(pool, async (client) => {
+      const user = (await client.query(
+        'SELECT id, role FROM users WHERE id=$1 AND deleted_at IS NULL', [id]
+      )).rows[0];
+      if (!user) throw Object.assign(new Error('User tidak ditemukan'), { statusCode: 404 });
+
+      await client.query(
+        'UPDATE users SET deleted_at=NOW(), aktif=FALSE WHERE id=$1', [id]
+      );
+
+      // Jika user adalah dokter, soft-delete profil dokter terkait sekaligus
+      // agar dokter tidak muncul lagi di dropdown dan konsisten dengan
+      // penghapusan via halaman Data Dokter (dokterController.remove)
+      if (user.role === 'dokter') {
+        await client.query(
+          'UPDATE dokter SET deleted_at=NOW(), aktif=FALSE WHERE user_id=$1 AND deleted_at IS NULL',
+          [id]
+        );
+      }
+    });
+
     return success(res, null, 'User berhasil dihapus');
   } catch (err) {
+    if (err.statusCode === 404) return notFound(res, err.message);
     logger.error({ err, userId: req.user?.id }, 'userController.remove');
     return res.status(500).json({ success: false, message: 'Terjadi kesalahan server' });
   }

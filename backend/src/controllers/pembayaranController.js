@@ -84,7 +84,8 @@ const getPreviewTagihan = async (req, res) => {
 
     // Tarif yang sudah dipilih dokter saat menutup kunjungan
     const tarifDisarankan = (await pool.query(
-      `SELECT tl.id, tl.nama, tl.harga
+      `SELECT tl.id, tl.nama, tl.harga,
+              (tl.deleted_at IS NULL AND tl.aktif = TRUE) AS masih_berlaku
        FROM kunjungan_tarif kt
        JOIN tarif_layanan tl ON kt.tarif_id = tl.id
        WHERE kt.kunjungan_id = $1`,
@@ -205,16 +206,36 @@ const proses = async (req, res) => {
 
       const kembalian = metode_bayar === 'tunai' ? totalBayarNum - totalTagihan : 0;
 
-      // Buat record pembayaran
+      // Buat atau perbarui record pembayaran.
+      // Menggunakan UPSERT (ON CONFLICT ... DO UPDATE) karena kunjungan_id
+      // memiliki UNIQUE constraint — jika sudah ada row void untuk kunjungan
+      // ini, kita UPDATE row yang sama alih-alih INSERT baru yang akan crash.
       const pb = (await client.query(
         `INSERT INTO pembayaran(kunjungan_id, pasien_id, total_tagihan, total_bayar, kembalian,
-                                metode_bayar, status, kasir_id, waktu_bayar, catatan)
-         VALUES($1,$2,$3,$4,$5,$6,'lunas',$7,NOW(),$8)
+                                metode_bayar, status, kasir_id, waktu_bayar, catatan,
+                                void_oleh, waktu_void, alasan_void)
+         VALUES($1,$2,$3,$4,$5,$6,'lunas',$7,NOW(),$8,NULL,NULL,NULL)
+         ON CONFLICT (kunjungan_id) DO UPDATE SET
+           total_tagihan = EXCLUDED.total_tagihan,
+           total_bayar   = EXCLUDED.total_bayar,
+           kembalian     = EXCLUDED.kembalian,
+           metode_bayar  = EXCLUDED.metode_bayar,
+           status        = 'lunas',
+           kasir_id      = EXCLUDED.kasir_id,
+           waktu_bayar   = NOW(),
+           catatan       = EXCLUDED.catatan,
+           void_oleh     = NULL,
+           waktu_void    = NULL,
+           alasan_void   = NULL,
+           updated_at    = NOW()
          RETURNING *`,
         [kunjunganId, kj.pasien_id, totalTagihan,
           metode_bayar === 'tunai' ? totalBayarNum : totalTagihan,
           kembalian, metode_bayar, req.user.id, catatan || null]
       )).rows[0];
+
+      // Hapus item lama (dari proses sebelumnya yang di-void) lalu insert ulang
+      await client.query('DELETE FROM pembayaran_item WHERE pembayaran_id=$1', [pb.id]);
 
       // Insert rincian item
       for (const item of semuaItem) {

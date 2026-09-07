@@ -133,10 +133,17 @@ const create = async (req, res) => {
     // M2 FIX: withTransaction — ROLLBACK aman
     const rekamMedis = await withTransaction(pool, async (client) => {
       const kj = (await client.query(
-        'SELECT id, pasien_id, dokter_id FROM kunjungan WHERE id=$1 AND deleted_at IS NULL',
+        'SELECT id, pasien_id, dokter_id, status FROM kunjungan WHERE id=$1 AND deleted_at IS NULL',
         [parseInt(kunjungan_id)]
       )).rows[0];
       if (!kj) throw Object.assign(new Error('Kunjungan tidak ditemukan'), { statusCode: 404 });
+
+      // Rekam medis hanya bisa dibuat untuk kunjungan yang sedang aktif
+      if (!['menunggu', 'diperiksa'].includes(kj.status))
+        throw Object.assign(
+          new Error(`Tidak bisa membuat rekam medis untuk kunjungan berstatus '${kj.status}'`),
+          { statusCode: 400 }
+        );
 
       if ((await client.query(
         'SELECT id FROM rekam_medis WHERE kunjungan_id=$1 AND deleted_at IS NULL', [kunjungan_id]

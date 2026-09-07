@@ -110,6 +110,8 @@ const create = async (req, res) => {
     );
     return created(res, rows[0], 'Pasien berhasil didaftarkan');
   } catch (err) {
+    if (err.code === '23505' && err.constraint === 'idx_pasien_nik_unique')
+      return badRequest(res, 'NIK sudah digunakan pasien lain');
     logger.error({ err, userId: req.user?.id }, 'pasienController.create');
     return res.status(500).json({ success: false, message: 'Terjadi kesalahan server' });
   }
@@ -188,6 +190,8 @@ const update = async (req, res) => {
 
     return success(res, rows[0], 'Data pasien berhasil diperbarui');
   } catch (err) {
+    if (err.code === '23505' && err.constraint === 'idx_pasien_nik_unique')
+      return badRequest(res, 'NIK sudah digunakan pasien lain');
     logger.error({ err, userId: req.user?.id }, 'pasienController.update');
     return res.status(500).json({ success: false, message: 'Terjadi kesalahan server' });
   }
@@ -197,6 +201,19 @@ const remove = async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     if (isNaN(id)) return badRequest(res, 'ID pasien tidak valid');
+
+    // Cegah hapus pasien yang masih punya kunjungan aktif — akan meninggalkan
+    // antrian orphan yang tidak bisa diselesaikan
+    const kunjunganAktif = (await pool.query(
+      `SELECT id FROM kunjungan
+       WHERE pasien_id = $1
+         AND status IN ('menunggu', 'diperiksa', 'menunggu_bayar')
+         AND deleted_at IS NULL
+       LIMIT 1`,
+      [id]
+    )).rows;
+    if (kunjunganAktif.length)
+      return badRequest(res, 'Pasien tidak dapat dihapus karena masih memiliki kunjungan aktif. Selesaikan atau batalkan kunjungan terlebih dahulu.');
 
     const { rows } = await pool.query(
       'UPDATE pasien SET deleted_at=NOW() WHERE id=$1 AND deleted_at IS NULL RETURNING id', [id]

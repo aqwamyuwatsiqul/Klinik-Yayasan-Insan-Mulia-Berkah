@@ -63,20 +63,32 @@ function DetailModal({ open, onClose, resepId, onKonfirmasi }) {
                     <div
                       key={item.id}
                       className={`flex items-start gap-3 p-3 rounded-[8px] border ${
-                        item.stok < item.jumlah
-                          ? 'border-status-danger/40 bg-status-danger-bg'
-                          : 'border-border bg-primary-tint/40'
+                        item.obat_dihapus
+                          ? 'border-status-danger/60 bg-status-danger-bg'
+                          : item.stok < item.jumlah
+                            ? 'border-status-danger/40 bg-status-danger-bg'
+                            : 'border-border bg-primary-tint/40'
                       }`}
                     >
                       <div className="w-6 h-6 rounded-full bg-primary text-white text-xs flex items-center justify-center font-bold flex-shrink-0">
                         {i + 1}
                       </div>
                       <div className="flex-1">
-                        <p className="text-sm font-medium text-text-primary">{item.nama_obat}</p>
+                        <p className="text-sm font-medium text-text-primary">
+                          {item.nama_obat || '(obat telah dihapus)'}
+                          {item.obat_dihapus && (
+                            <span className="ml-2 badge badge-red text-[10px]">Dihapus</span>
+                          )}
+                        </p>
                         <p className="text-xs text-text-secondary">
                           {item.dosis} · {item.aturan_pakai} · Jumlah:{' '}
                           <strong>{item.jumlah} {item.satuan}</strong>
                         </p>
+                        {item.obat_dihapus ? (
+                          <p className="text-xs text-status-danger mt-0.5 font-semibold">
+                            Obat ini sudah dihapus — resep tidak bisa dikonfirmasi
+                          </p>
+                        ) : (
                         <p className="text-xs mt-0.5">
                           Stok:{' '}
                           <span className={
@@ -90,6 +102,7 @@ function DetailModal({ open, onClose, resepId, onKonfirmasi }) {
                             <span className="ml-1 badge badge-red">Stok tidak cukup</span>
                           )}
                         </p>
+                        )}
                       </div>
                     </div>
                   ))}
@@ -177,7 +190,7 @@ export default function AntrianResep() {
 
         {/* Filter status */}
         <div className="px-6 py-3 border-b border-border flex gap-2">
-          {['menunggu', 'selesai', 'batal'].map((s) => (
+          {['menunggu', 'diproses', 'selesai', 'batal'].map((s) => (
             <button
               key={s}
               onClick={() => setStatusFilter(s)}

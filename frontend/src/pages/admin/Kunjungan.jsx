@@ -1,17 +1,18 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { kunjunganAPI, pasienAPI, dokterAPI } from '../../api';
 import { formatDateTime, statusKunjunganLabel, getErrorMessage } from '../../utils/helpers';
 import Spinner from '../../components/common/Spinner';
 import EmptyState from '../../components/common/EmptyState';
+import ConfirmDialog from '../../components/common/ConfirmDialog';
 import { Plus, X, RefreshCw } from 'lucide-react';
 import toast from 'react-hot-toast';
 import dayjs from 'dayjs';
 
 function DaftarModal({ open, onClose }) {
   const qc = useQueryClient();
-  const { register, handleSubmit, formState: { errors } } = useForm({
+  const { register, handleSubmit, reset, setValue, formState: { errors } } = useForm({
     defaultValues: { tanggal: dayjs().format('YYYY-MM-DD') },
   });
   const [q, setQ] = useState('');
@@ -21,6 +22,13 @@ function DaftarModal({ open, onClose }) {
     queryFn: () => pasienAPI.getAll({ search: q, limit: 10 }).then((r) => r.data.data),
     enabled: q.length > 1,
   });
+
+  // Reset pilihan pasien setiap kali hasil pencarian berubah — mencegah
+  // kondisi di mana pasien_id lama masih tersimpan di form meski daftar
+  // pasien yang tampil sudah berbeda karena kata kunci pencarian diganti
+  useEffect(() => {
+    setValue('pasien_id', '');
+  }, [pasienData, setValue]);
   const { data: dokterData } = useQuery({
     queryKey: ['dokter-select'],
     queryFn: () => dokterAPI.getAll({ limit: 50 }).then((r) => r.data.data),
@@ -125,6 +133,7 @@ export default function Kunjungan() {
   const [tanggal, setTanggal]     = useState(dayjs().format('YYYY-MM-DD'));
   const [statusF, setStatusF]     = useState('');
   const [showModal, setShowModal] = useState(false);
+  const [batalId,   setBatalId  ] = useState(null);
 
   const { data, isLoading, refetch } = useQuery({
     queryKey: ['kunjungan-admin', tanggal, statusF],
@@ -221,7 +230,7 @@ export default function Kunjungan() {
                       <td>
                         {['menunggu', 'diperiksa', 'menunggu_bayar'].includes(k.status) && (
                           <button
-                            onClick={() => statusMut.mutate({ id: k.id, status: 'batal' })}
+                            onClick={() => setBatalId(k.id)}
                             className="btn-secondary btn-sm text-status-danger border-status-danger/30 hover:bg-status-danger-bg"
                           >
                             Batalkan
@@ -238,6 +247,14 @@ export default function Kunjungan() {
       </div>
 
       <DaftarModal open={showModal} onClose={() => setShowModal(false)} />
+      <ConfirmDialog
+        open={!!batalId}
+        title="Batalkan kunjungan?"
+        message="Kunjungan akan dibatalkan dan tidak bisa dikembalikan. Pastikan pasien dan dokter sudah diberitahu."
+        onConfirm={() => { statusMut.mutate({ id: batalId, status: 'batal' }); setBatalId(null); }}
+        onCancel={() => setBatalId(null)}
+        loading={statusMut.isPending}
+      />
     </div>
   );
 }

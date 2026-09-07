@@ -82,7 +82,6 @@ const create = async (req, res) => {
       harga = 0, tanggal_kadaluarsa, keterangan,
     } = req.body;
 
-    // Validasi tambahan di luar middleware
     if (tanggal_kadaluarsa && !isValidDate(tanggal_kadaluarsa))
       return badRequest(res, 'Format tanggal kadaluarsa tidak valid');
 
@@ -90,21 +89,25 @@ const create = async (req, res) => {
     const minInt  = Math.max(0, parseInt(stok_minimum) || 10);
     const hargaF  = Math.max(0, parseFloat(harga) || 0);
 
-    const kode_obat = (await pool.query('SELECT generate_kode_obat() AS kode')).rows[0].kode;
-    const { rows } = await pool.query(
-      `INSERT INTO obat(kode_obat, nama, jenis, satuan, stok, stok_minimum, harga, tanggal_kadaluarsa, keterangan)
-       VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`,
-      [kode_obat, nama.trim(), jenis || null, satuan.trim(), stokInt, minInt, hargaF,
-        tanggal_kadaluarsa || null, keterangan || null]
-    );
-    if (stokInt > 0) {
-      await pool.query(
-        `INSERT INTO stok_log(obat_id, tipe, jumlah, stok_sebelum, stok_sesudah, keterangan, user_id)
-         VALUES($1,'masuk',$2,0,$3,'Stok awal',$4)`,
-        [rows[0].id, stokInt, stokInt, req.user.id]
+    const obat = await withTransaction(pool, async (client) => {
+      const kode_obat = (await client.query('SELECT generate_kode_obat() AS kode')).rows[0].kode;
+      const { rows } = await client.query(
+        `INSERT INTO obat(kode_obat, nama, jenis, satuan, stok, stok_minimum, harga, tanggal_kadaluarsa, keterangan)
+         VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`,
+        [kode_obat, nama.trim(), jenis || null, satuan.trim(), stokInt, minInt, hargaF,
+          tanggal_kadaluarsa || null, keterangan || null]
       );
-    }
-    return created(res, rows[0], 'Obat berhasil ditambahkan');
+      if (stokInt > 0) {
+        await client.query(
+          `INSERT INTO stok_log(obat_id, tipe, jumlah, stok_sebelum, stok_sesudah, keterangan, user_id)
+           VALUES($1,'masuk',$2,0,$3,'Stok awal',$4)`,
+          [rows[0].id, stokInt, stokInt, req.user.id]
+        );
+      }
+      return rows[0];
+    });
+
+    return created(res, obat, 'Obat berhasil ditambahkan');
   } catch (err) {
     logger.error({ err, userId: req.user?.id }, 'obatController.create');
     return res.status(500).json({ success: false, message: 'Terjadi kesalahan server' });
@@ -200,6 +203,20 @@ const remove = async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     if (isNaN(id)) return badRequest(res, 'ID obat tidak valid');
+
+    // Cegah hapus obat yang sedang ada di resep aktif — akan membuat
+    // resep tidak bisa dikonfirmasi dan kunjungan stuck
+    const resepAktif = (await pool.query(
+      `SELECT r.id FROM resep_item ri
+       JOIN resep r ON ri.resep_id = r.id
+       WHERE ri.obat_id = $1
+         AND r.status IN ('menunggu', 'diproses')
+         AND r.deleted_at IS NULL
+       LIMIT 1`,
+      [id]
+    )).rows;
+    if (resepAktif.length)
+      return badRequest(res, 'Obat tidak dapat dihapus karena masih digunakan di resep aktif. Selesaikan atau batalkan resep terkait terlebih dahulu.');
 
     const { rows } = await pool.query(
       'UPDATE obat SET deleted_at=NOW() WHERE id=$1 AND deleted_at IS NULL RETURNING id', [id]

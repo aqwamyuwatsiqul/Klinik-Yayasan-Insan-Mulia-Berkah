@@ -1,5 +1,6 @@
 const pool   = require('../config/database');
 const logger = require('../utils/logger');
+const { withTransaction } = require('../utils/db');
 const { success, notFound, badRequest } = require('../utils/response');
 const { parsePagination, paginateQuery } = require('../utils/pagination');
 
@@ -82,13 +83,27 @@ const remove = async (req, res) => {
     const id = parseInt(req.params.id);
     if (isNaN(id)) return badRequest(res, 'ID dokter tidak valid');
 
-    const { rows } = await pool.query(
-      'UPDATE dokter SET deleted_at=NOW(), aktif=FALSE WHERE id=$1 AND deleted_at IS NULL RETURNING id',
-      [id]
-    );
-    if (!rows.length) return notFound(res, 'Dokter tidak ditemukan');
-    return success(res, null, 'Data dokter berhasil dihapus');
+    await withTransaction(pool, async (client) => {
+      const dokter = (await client.query(
+        'SELECT user_id FROM dokter WHERE id=$1 AND deleted_at IS NULL', [id]
+      )).rows[0];
+      if (!dokter) throw Object.assign(new Error('Dokter tidak ditemukan'), { statusCode: 404 });
+
+      await client.query(
+        'UPDATE dokter SET deleted_at=NOW(), aktif=FALSE WHERE id=$1', [id]
+      );
+      // Nonaktifkan akun login terkait agar dokter tidak bisa login
+      // setelah profilnya dihapus — mencegah akses data tanpa filter
+      if (dokter.user_id) {
+        await client.query(
+          'UPDATE users SET aktif=FALSE WHERE id=$1', [dokter.user_id]
+        );
+      }
+    });
+
+    return success(res, null, 'Data dokter berhasil dihapus. Akun login terkait juga dinonaktifkan.');
   } catch (err) {
+    if (err.statusCode === 404) return notFound(res, err.message);
     logger.error({ err, userId: req.user?.id }, 'dokterController.remove');
     return res.status(500).json({ success: false, message: 'Terjadi kesalahan server' });
   }
