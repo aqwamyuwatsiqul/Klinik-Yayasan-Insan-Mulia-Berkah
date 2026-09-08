@@ -196,14 +196,14 @@ cd backend && node src/index.js
 
 Tersedia setelah menjalankan `npm run seed`:
 
-| Role | Email | Password | Nama |
-|------|-------|----------|------|
-| 👑 Owner | owner@klinik.com | `Owner123!` | Owner Klinik |
-| 🖥️ Admin | admin@klinik.com | `Admin123!` | Admin Klinik |
-| 🩺 Dokter | dokter@klinik.com | `Dokter123!` | dr. Siti Rahayu |
-| 🩺 Dokter 2 | dokter2@klinik.com | `Dokter123!` | dr. Budi Santoso |
-| 💊 Apoteker | apoteker@klinik.com | `Apoteker123!` | Apoteker Klinik |
-| 💰 Kasir | kasir@klinik.com | `Kasir123!` | Kasir Klinik |
+| Role | Username | Email | Password | Nama |
+|------|----------|-------|----------|------|
+| 👑 Owner | `owner` | owner@klinik.sch.id | `Password123!` | Yuwatsiqul Aqwam |
+| 🖥️ Admin | `admin` | admin@klinik.sch.id | `Password123!` | Budi Raharjo |
+| 🩺 Dokter | `dokter1` | siti.rahayu@klinik.sch.id | `Password123!` | dr. Siti Rahayu |
+| 🩺 Dokter 2 | `dokter2` | budi.santoso@klinik.sch.id | `Password123!` | dr. Budi Santoso |
+| 💊 Apoteker | `apoteker1` | farida@klinik.sch.id | `Password123!` | Farida Aprilia |
+| 💰 Kasir | `kasir1` | kasir@klinik.sch.id | `Password123!` | Rizal Firmansyah |
 
 > ⚠️ Ganti seluruh password default sebelum deployment ke server produksi via menu **Pengaturan Akun**.
 
