@@ -49,9 +49,7 @@ const NAV = {
 };
 
 function Avatar({ user }) {
-  const photoUrl = useAuthedImage(
-    user?.foto_profil ? `/uploads/profil/${user.foto_profil}` : null,
-  );
+  const photoUrl = useAuthedImage(user?.foto_profil ?? null);
 
   if (photoUrl) {
     return (

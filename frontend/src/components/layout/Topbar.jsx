@@ -182,10 +182,8 @@ function ProfileDropdown({ user, onLogout }) {
 
   const go = (path) => { setOpen(false); navigate(path); };
 
-  // Avatar — foto atau inisial (fetch via axios agar Authorization header ikut)
-  const avatarUrl = useAuthedImage(
-    user?.foto_profil ? `/uploads/profil/${user.foto_profil}` : null,
-  );
+  // Avatar — foto atau inisial
+  const avatarUrl = useAuthedImage(user?.foto_profil ?? null);
 
   const AvatarSm = () => avatarUrl ? (
     <img

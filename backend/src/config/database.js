@@ -1,12 +1,25 @@
 const { Pool } = require('pg');
 require('dotenv').config();
 
+// ── SSL config ────────────────────────────────────────────────────────────
+// DB_SSL=true  → aktifkan SSL (wajib untuk Neon, Supabase, Railway, dll).
+// rejectUnauthorized: false diperlukan untuk provider yang memakai self-signed
+// certificate pada connection string internal (umum di Neon & Render).
+// Jika provider Anda menyediakan CA cert sendiri, ganti dengan { ca: fs.readFileSync(...) }.
+const sslConfig = (() => {
+  const val = (process.env.DB_SSL || '').toLowerCase();
+  if (val === 'true')  return { rejectUnauthorized: false };
+  if (val === 'false') return false;
+  return undefined; // tidak di-set → biarkan pg putuskan (default: off untuk localhost)
+})();
+
 const pool = new Pool({
   host    : process.env.DB_HOST     || 'localhost',
   port    : parseInt(process.env.DB_PORT) || 5432,
   database: process.env.DB_NAME     || 'klinik_sekolah',
   user    : process.env.DB_USER     || 'postgres',
   password: process.env.DB_PASSWORD || '',
+  ...(sslConfig !== undefined && { ssl: sslConfig }),
 
   // ── Connection pool ────────────────────────────────────────────────────
   max                    : 20,      // maks 20 koneksi serentak
