@@ -22,7 +22,6 @@ const compression = require('compression');
 const logger     = require('./utils/logger');
 
 const app  = express();
-const PORT = process.env.PORT || 5000;
 
 // ── Kompresi Gzip/Brotli (Pilar 3) ────────────────────────────────────────
 // Kompres semua response text (JSON, HTML, CSS, JS) sebelum dikirim ke client.
@@ -264,8 +263,18 @@ process.on('uncaughtException', (err) => {
   process.exit(1);
 });
 
-// ── Start server ───────────────────────────────────────────────────────────
-app.listen(PORT, () => {
-  logger.info(`Klinik API berjalan di http://localhost:${PORT}/api/health`);
-  logger.info(`ENV: ${process.env.NODE_ENV || 'development'}`);
-});
+// ── Export app untuk Vercel serverless ────────────────────────────────────
+// Vercel mengimpor modul ini dan menggunakan `app` sebagai handler.
+// Di luar Vercel (development lokal), app.listen() dipanggil seperti biasa.
+module.exports = app;
+
+// ── Start server (hanya di luar Vercel) ───────────────────────────────────
+// process.env.VERCEL otomatis di-set oleh platform Vercel saat deploy.
+// Di lokal, variabel ini tidak ada sehingga listen tetap berjalan normal.
+if (!process.env.VERCEL) {
+  const PORT = process.env.PORT || 5000;
+  app.listen(PORT, () => {
+    logger.info(`Klinik API berjalan di http://localhost:${PORT}/api/health`);
+    logger.info(`ENV: ${process.env.NODE_ENV || 'development'}`);
+  });
+}
