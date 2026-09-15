@@ -1,0 +1,91 @@
+name: 🗄️ Database Backup Harian
+
+# Jadwal: setiap hari pukul 02.00 WIB (19.00 UTC hari sebelumnya)
+# Bisa juga di-trigger manual dari tab Actions di GitHub
+on:
+  schedule:
+    - cron: '0 19 * * *'
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: 'Alasan backup manual (opsional)'
+        required: false
+        default: 'Backup manual'
+
+jobs:
+  backup:
+    name: Backup PostgreSQL → Artifact
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      # ── 1. Install postgresql-client ──────────────────────────────────────
+      - name: Install postgresql-client
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y postgresql-client
+
+      # ── 2. Jalankan pg_dump ───────────────────────────────────────────────
+      # Hasil dump: backup-YYYY-MM-DD.sql.gz (compressed, lebih kecil ~70%)
+      - name: Dump database
+        env:
+          PGPASSWORD: ${{ secrets.DB_PASSWORD }}
+        run: |
+          FILENAME="backup-$(date +'%Y-%m-%d').sql.gz"
+          echo "BACKUP_FILE=$FILENAME" >> $GITHUB_ENV
+
+          pg_dump \
+            --host="${{ secrets.DB_HOST }}" \
+            --port="${{ secrets.DB_PORT || '5432' }}" \
+            --username="${{ secrets.DB_USER }}" \
+            --dbname="${{ secrets.DB_NAME }}" \
+            --no-password \
+            --verbose \
+            --clean \
+            --if-exists \
+            --format=plain \
+          | gzip -9 > "$FILENAME"
+
+          # Tampilkan ukuran file hasil backup
+          echo "### 📦 Hasil Backup" >> $GITHUB_STEP_SUMMARY
+          echo "| Item | Nilai |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| File | \`$FILENAME\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Ukuran | $(du -sh "$FILENAME" | cut -f1) |" >> $GITHUB_STEP_SUMMARY
+          echo "| Waktu (UTC) | $(date -u '+%Y-%m-%d %H:%M:%S') |" >> $GITHUB_STEP_SUMMARY
+          echo "| Trigger | ${{ github.event_name }} |" >> $GITHUB_STEP_SUMMARY
+
+      # ── 3. Upload sebagai GitHub Artifact (retensi 90 hari) ───────────────
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: db-backup-${{ env.BACKUP_DATE || github.run_number }}
+          path: ${{ env.BACKUP_FILE }}
+          retention-days: 14
+          if-no-files-found: error
+
+      # ── 4. Summary sukses ─────────────────────────────────────────────────
+      - name: Summary
+        if: success()
+        run: |
+          echo "✅ Backup berhasil disimpan sebagai artifact." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Cara restore:**" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
+          echo "# Download artifact dari GitHub Actions, lalu:" >> $GITHUB_STEP_SUMMARY
+          echo "gunzip backup-YYYY-MM-DD.sql.gz" >> $GITHUB_STEP_SUMMARY
+          echo "psql -h HOST -U USER -d DB_NAME < backup-YYYY-MM-DD.sql" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+
+      # ── 5. Notifikasi gagal ───────────────────────────────────────────────
+      - name: Notifikasi gagal
+        if: failure()
+        run: |
+          echo "## ❌ Backup GAGAL" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Backup database harian **gagal** pada $(date -u '+%Y-%m-%d %H:%M:%S UTC')." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Periksa log di atas untuk detail error. Kemungkinan penyebab:" >> $GITHUB_STEP_SUMMARY
+          echo "- Secret DB belum dikonfigurasi di repository Settings → Secrets" >> $GITHUB_STEP_SUMMARY
+          echo "- Host database tidak bisa diakses dari GitHub Actions" >> $GITHUB_STEP_SUMMARY
+          echo "- Kredensial database salah atau kedaluwarsa" >> $GITHUB_STEP_SUMMARY

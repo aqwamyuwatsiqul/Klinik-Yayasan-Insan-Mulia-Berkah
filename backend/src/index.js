@@ -141,11 +141,11 @@ const loginLimiter = rateLimit({
 });
 app.use('/api/auth/login', loginLimiter);
 
-// ── Static files: foto profil ─────────────────────────────────────────────
-// C2 FIX: /uploads TIDAK lagi public static.
-// Akses foto profil hanya untuk user yang sudah login (authenticate).
-// Validasi nama file: hanya hex32.webp yang diizinkan (format yang kita generate).
-// Boundary check: path.resolve memastikan tidak ada path traversal.
+// ── Static files: foto profil (legacy — sebelum migrasi Cloudinary) ─────────
+// Rute ini dipertahankan untuk backward compatibility: foto profil yang diupload
+// sebelum migrasi ke Cloudinary masih tersimpan sebagai file hex32.webp di disk.
+// Foto baru sudah menggunakan URL Cloudinary (HTTPS publik) dan tidak melewati rute ini.
+// Rute ini bisa dihapus setelah semua user upload ulang foto mereka.
 const path = require('path');
 const fs   = require('fs');
 const { authenticate } = require('./middleware/auth');

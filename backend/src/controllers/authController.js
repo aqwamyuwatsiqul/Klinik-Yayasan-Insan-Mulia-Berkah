@@ -1,23 +1,11 @@
 // ── Imports di top-level — jangan require() di dalam fungsi ──────────────
-const bcrypt = require('bcryptjs');
-const jwt    = require('jsonwebtoken');
-const sharp  = require('sharp');
-const path   = require('path');
-const fs     = require('fs');
-const crypto = require('crypto');
-const pool   = require('../config/database');
-const logger = require('../utils/logger');
+const bcrypt     = require('bcryptjs');
+const jwt        = require('jsonwebtoken');
+const sharp      = require('sharp');
+const pool       = require('../config/database');
+const cloudinary = require('../config/cloudinary');
+const logger     = require('../utils/logger');
 const { success, unauthorized, badRequest } = require('../utils/response');
-
-// Direktori upload — di-resolve sekali saat modul dimuat
-const UPLOAD_DIR = path.resolve(__dirname, '../../uploads/profil');
-
-// ── Helper: hapus file dengan aman (tidak crash jika tidak ada) ───────────
-const safeUnlink = (filePath) => {
-  try { fs.unlinkSync(filePath); } catch (e) {
-    if (e.code !== 'ENOENT') logger.warn({ path: filePath, code: e.code }, 'Gagal hapus file');
-  }
-};
 
 // ──────────────────────────────────────────────────────────────────────────
 // FIX C3: Tidak ada lagi interpolasi nama kolom ke SQL.
@@ -192,73 +180,56 @@ const updateProfile = async (req, res) => {
 };
 
 // ──────────────────────────────────────────────────────────────────────────
-// FIX C1: Path traversal prevention pada upload foto profil.
+// Upload foto profil ke Cloudinary.
 //
-// Masalah lama: outputName berasal dari req.file.filename yang bisa
-// dimanipulasi attacker untuk menulis file di luar UPLOAD_DIR.
-//
-// Fix:
-//  1. Generate nama output baru sepenuhnya dari crypto.randomBytes — tidak
-//     bergantung req.file.filename sama sekali.
-//  2. path.resolve() + startsWith(UPLOAD_DIR) memastikan output path
-//     benar-benar berada di dalam direktori yang diizinkan.
-//  3. path.basename() saat hapus foto lama — eliminasi komponen path.
+// Alur:
+//  1. Multer (memoryStorage) menyimpan file di req.file.buffer — tidak ada
+//     file temporer di disk.
+//  2. Sharp meresize + mengkonversi ke WebP 256×256 di memory.
+//  3. Buffer hasil resize di-stream ke Cloudinary via upload_stream.
+//  4. public_id = `klinik/profil/profil_${userId}` — Cloudinary otomatis
+//     menimpa (overwrite) file lama dengan public_id yang sama, sehingga
+//     tidak perlu kode hapus foto lama secara eksplisit.
+//  5. URL HTTPS dari Cloudinary disimpan ke kolom foto_profil di database.
 // ──────────────────────────────────────────────────────────────────────────
 const uploadFotoProfil = async (req, res) => {
-  const inputPath = req.file?.path || null;
-
   try {
-    if (!req.file || !inputPath) return badRequest(res, 'File foto tidak ditemukan');
+    if (!req.file?.buffer) return badRequest(res, 'File foto tidak ditemukan');
 
-    // C1 FIX 1: Nama output di-generate sepenuhnya secara independen dari input
-    const safeName   = `${crypto.randomBytes(16).toString('hex')}.webp`;
-    const outputPath = path.resolve(UPLOAD_DIR, safeName);
-
-    // C1 FIX 2: Boundary check — pastikan output path di dalam UPLOAD_DIR
-    if (!outputPath.startsWith(UPLOAD_DIR + path.sep)) {
-      safeUnlink(inputPath);
-      logger.warn({ userId: req.user.id }, 'Path traversal attempt pada upload foto');
-      return badRequest(res, 'Nama file tidak valid');
-    }
-
-    // Pastikan direktori ada
-    if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
-
-    // Resize + konversi ke WebP (tidak pernah simpan file original)
-    await sharp(inputPath)
+    // Resize + konversi ke WebP 256×256 di memory (tidak menyentuh disk)
+    const webpBuffer = await sharp(req.file.buffer)
       .resize(256, 256, { fit: 'cover', position: 'centre' })
       .webp({ quality: 85 })
-      .toFile(outputPath);
+      .toBuffer();
 
-    // Hapus file upload asli setelah konversi berhasil
-    safeUnlink(inputPath);
+    // Upload ke Cloudinary via stream — public_id unik per user
+    const publicId = `klinik/profil/profil_${req.user.id}`;
+    const uploadResult = await new Promise((resolve, reject) => {
+      const stream = cloudinary.uploader.upload_stream(
+        {
+          public_id     : publicId,
+          resource_type : 'image',
+          overwrite     : true,   // timpa foto profil lama secara otomatis
+          invalidate    : true,   // purge CDN cache foto lama
+          format        : 'webp',
+        },
+        (error, result) => {
+          if (error) reject(error);
+          else resolve(result);
+        }
+      );
+      stream.end(webpBuffer);
+    });
 
-    // C1 FIX 3: Gunakan path.basename() saat hapus foto lama — eliminasi traversal
-    const old = (await pool.query(
-      'SELECT foto_profil FROM users WHERE id=$1', [req.user.id]
-    )).rows[0];
-
-    if (old?.foto_profil) {
-      // Hanya ambil nama file (basename) — abaikan path dari DB
-      const oldBase = path.basename(old.foto_profil);
-      // Validasi: nama file hanya boleh hex.webp (format yang kita generate)
-      if (/^[a-f0-9]{32}\.webp$/.test(oldBase)) {
-        const oldPath = path.resolve(UPLOAD_DIR, oldBase);
-        // Boundary check ulang untuk path lama
-        if (oldPath.startsWith(UPLOAD_DIR + path.sep)) safeUnlink(oldPath);
-      }
-    }
-
+    // Simpan URL HTTPS Cloudinary ke database
     const { rows } = await pool.query(
       'UPDATE users SET foto_profil=$1 WHERE id=$2 RETURNING id, nama, username, role, email, foto_profil',
-      [safeName, req.user.id]
+      [uploadResult.secure_url, req.user.id]
     );
 
-    logger.info({ userId: req.user.id }, 'Foto profil diperbarui');
+    logger.info({ userId: req.user.id, url: uploadResult.secure_url }, 'Foto profil diperbarui ke Cloudinary');
     return success(res, rows[0], 'Foto profil berhasil diperbarui');
   } catch (err) {
-    // Pastikan file upload dihapus jika ada error di tengah proses
-    if (inputPath) safeUnlink(inputPath);
     logger.error({ err, userId: req.user?.id }, 'authController.uploadFotoProfil');
     return res.status(500).json({ success: false, message: 'Terjadi kesalahan server' });
   }

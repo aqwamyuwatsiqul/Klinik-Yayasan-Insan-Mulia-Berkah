@@ -1,19 +1,9 @@
-const multer  = require('multer');
-const path    = require('path');
-const crypto  = require('crypto');
+const multer = require('multer');
 
-// Simpan ke disk — folder uploads/profil
-const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => {
-    cb(null, path.join(__dirname, '../../uploads/profil'));
-  },
-  filename: (_req, file, cb) => {
-    // Nama acak agar tidak bisa ditebak + ekstensi asli
-    const rand = crypto.randomBytes(16).toString('hex');
-    const ext  = path.extname(file.originalname).toLowerCase();
-    cb(null, `${rand}${ext}`);
-  },
-});
+// Gunakan memoryStorage — file tidak ditulis ke disk sama sekali.
+// Buffer tersedia di req.file.buffer, siap diteruskan ke Cloudinary.
+// Ini menghilangkan masalah ephemeral filesystem di Render Free tier.
+const storage = multer.memoryStorage();
 
 // Filter: hanya gambar jpg/jpeg/png/webp, maks 2 MB
 const fileFilter = (_req, file, cb) => {

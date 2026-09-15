@@ -441,6 +441,39 @@ Sebelum menjalankan di server produksi:
 
 ---
 
+## ⚠️ Cara Berbagi Project dengan Aman
+
+File `.env` berisi kredensial asli (password database, JWT secret, API key) dan sudah
+tercantum di `.gitignore` — artinya **tidak akan masuk ke commit Git**. Namun
+`.gitignore` **tidak melindungi** file tersebut dari metode berbagi lain seperti
+compress manual (`zip`, `tar`) atau kirim lewat file manager.
+
+### ❌ Jangan lakukan ini
+
+```bash
+# Compress manual — .env IKUT terbawa karena tidak tahu aturan .gitignore
+zip -r klinik.zip .
+tar -czf klinik.tar.gz .
+```
+
+### ✅ Gunakan `git archive` sebagai gantinya
+
+`git archive` hanya mengemas file yang **sudah di-commit ke Git**, sehingga `.env`
+dan file lain yang ada di `.gitignore` otomatis tidak ikut.
+
+```bash
+# Buat arsip dari branch main — hanya file yang ter-commit yang masuk
+git archive --format=zip --output=klinik-share.zip HEAD
+
+# Atau format tar.gz
+git archive --format=tar.gz --output=klinik-share.tar.gz HEAD
+```
+
+> Jika ada file yang perlu disertakan tapi belum di-commit (misalnya file contoh
+> konfigurasi baru), commit dulu file tersebut sebelum menjalankan `git archive`.
+
+---
+
 ## 📄 Lisensi & Kontak
 
 Proyek ini merupakan sistem informasi internal milik **Yayasan Insan Mulia Berkah**.

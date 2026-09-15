@@ -1,82 +1,53 @@
-import { useEffect, useState } from 'react';
-import axios from 'axios';
+/**
+ * useAuthedImage — hook untuk menampilkan foto profil.
+ *
+ * Sejak migrasi ke Cloudinary, URL foto profil adalah URL publik HTTPS
+ * dari CDN Cloudinary (disimpan lengkap di kolom foto_profil di database).
+ * Tidak ada lagi kebutuhan fetch dengan Bearer token.
+ *
+ * Hook ini tetap dipertahankan sebagai abstraksi tipis agar komponen
+ * yang memakainya tidak perlu diubah — cukup terima `src` yang siap pakai.
+ *
+ * Perilaku:
+ * - Jika `fotoProfil` adalah URL lengkap (https://...) → kembalikan langsung
+ * - Jika null/undefined/kosong → kembalikan null (komponen tampilkan avatar default)
+ * - Backward compat: jika masih ada nama file lama (format hex.webp) dari
+ *   data sebelum migrasi, susun URL via path relatif /uploads/profil/:filename
+ *   agar foto lama tetap tampil setelah upgrade.
+ */
+
+const CLOUDINARY_PREFIX = 'https://res.cloudinary.com/';
+const LEGACY_FILENAME   = /^[a-f0-9]{32}\.webp$/;
 
 /**
- * Instance axios khusus untuk fetch file (tanpa baseURL /api).
- * Endpoint foto profil ada di /uploads/profil/:filename, bukan di /api/...
- * Token Bearer tetap disertakan via interceptor yang sama.
+ * Tidak ada lagi cache blob — URL Cloudinary langsung bisa jadi src <img>.
+ * Fungsi ini dipertahankan agar kode yang masih memanggil invalidateAuthedImage
+ * tidak error (no-op sekarang).
  */
-const fileApi = axios.create({ timeout: 15000 });
-fileApi.interceptors.request.use((config) => {
-  const token = sessionStorage.getItem('token');
-  if (token) config.headers.Authorization = `Bearer ${token}`;
-  return config;
-});
-
-/**
- * Cache blob URL per path.
- * Nama file di server selalu berubah (random hex) tiap kali user upload ulang,
- * tapi invalidasi eksplisit tetap tersedia via `invalidateAuthedImage(path)`
- * untuk kasus upload dalam sesi yang sama tanpa navigasi.
- */
-const blobCache = new Map();
-
-/**
- * Hapus cache entry untuk path tertentu.
- * Panggil ini sebelum memanggil onUploaded() setelah upload foto baru agar
- * hook langsung fetch ulang dari server dengan nama file yang baru.
- */
-export function invalidateAuthedImage(path) {
-  if (!path) return;
-  const existing = blobCache.get(path);
-  if (existing) {
-    URL.revokeObjectURL(existing);
-    blobCache.delete(path);
-  }
+export function invalidateAuthedImage() {
+  // no-op sejak migrasi Cloudinary — URL sudah unik per-upload via overwrite
 }
 
 /**
- * Fetch gambar yang butuh Authorization header lewat axios,
- * lalu kembalikan blob URL yang bisa langsung dipakai sebagai `src` <img>.
- *
- * @param {string|null} path  — URL path relatif, mis. "/uploads/profil/abc.webp"
- * @returns {string|null}     — blob URL saat sudah dimuat, null saat loading/error
+ * @param {string|null} fotoProfil — nilai dari user.foto_profil
+ * @returns {string|null} — URL siap pakai untuk src <img>, atau null
  */
-export default function useAuthedImage(path) {
-  const [url, setUrl] = useState(
-    () => (path && blobCache.has(path) ? blobCache.get(path) : null),
-  );
+export default function useAuthedImage(fotoProfil) {
+  if (!fotoProfil) return null;
 
-  useEffect(() => {
-    if (!path) {
-      setUrl(null);
-      return;
-    }
+  // URL Cloudinary lengkap — langsung kembalikan
+  if (fotoProfil.startsWith(CLOUDINARY_PREFIX) || fotoProfil.startsWith('https://')) {
+    return fotoProfil;
+  }
 
-    // Sudah ada di cache — langsung pakai, tidak perlu fetch ulang
-    if (blobCache.has(path)) {
-      setUrl(blobCache.get(path));
-      return;
-    }
+  // Backward compat: nama file lama (sebelum migrasi Cloudinary)
+  // Masih bisa tampil selama file belum dihapus dari disk lama.
+  // Ikut pakai VITE_BACKEND_URL agar request mengarah ke backend yang benar
+  // saat frontend di-deploy sebagai static site terpisah.
+  if (LEGACY_FILENAME.test(fotoProfil)) {
+    const backendBase = import.meta.env.VITE_BACKEND_URL || '';
+    return `${backendBase}/uploads/profil/${fotoProfil}`;
+  }
 
-    let cancelled = false;
-
-    fileApi
-      .get(path, { responseType: 'blob' })
-      .then((res) => {
-        if (cancelled) return;
-        const objectUrl = URL.createObjectURL(res.data);
-        blobCache.set(path, objectUrl);
-        setUrl(objectUrl);
-      })
-      .catch(() => {
-        if (!cancelled) setUrl(null);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [path]);
-
-  return url;
+  return null;
 }
