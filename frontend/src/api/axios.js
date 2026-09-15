@@ -11,12 +11,16 @@ import axiosRetry from 'axios-retry';
  * Hanya GET yang di-retry — mutasi (POST/PUT/PATCH/DELETE) TIDAK di-retry
  * karena idempotency tidak terjamin.
  */
-// Base URL diambil dari environment variable saat build.
-// - Production (static site terpisah): set VITE_BACKEND_URL=https://klinik-api.onrender.com
-//   di dashboard Render / .env.production sebelum build.
-// - Development: biarkan kosong — fallback ke '/api' agar proxy Vite tetap bekerja.
+// Base URL selalu diakhiri '/api' agar semua endpoint path relatif benar.
+// - Production : VITE_BACKEND_URL=https://klinik-api.vercel.app
+//                → baseURL = https://klinik-api.vercel.app/api
+// - Development : VITE_BACKEND_URL tidak di-set
+//                → baseURL = /api  (Vite proxy meneruskan ke localhost:5000)
+const rawBackendUrl = (import.meta.env.VITE_BACKEND_URL || '').replace(/\/+$/, '');
+const BASE_URL      = rawBackendUrl ? `${rawBackendUrl}/api` : '/api';
+
 const api = axios.create({
-  baseURL : import.meta.env.VITE_BACKEND_URL || '/api',
+  baseURL : BASE_URL,
   timeout : 15000,
   headers : {
     'X-Requested-With': 'XMLHttpRequest', // CSRF protection (C4)
