@@ -152,7 +152,7 @@ export default function MainLayout() {
   return (
     <div className="min-h-screen bg-surface-page">
 
-      {/* Overlay mobile */}
+      {/* Overlay mobile — z-20 (di BAWAH sidebar yang akan z-30) */}
       {open && (
         <div
           className="fixed inset-0 z-20 bg-black/40 lg:hidden"
@@ -175,7 +175,15 @@ export default function MainLayout() {
         }}
       >
         {/* ── Kolom 1: Sidebar ── */}
-        <div className="relative overflow-hidden" style={{ contain: 'strict' }}>
+        {/*
+          contain: strict DIHAPUS — properti itu membuat isolated stacking context
+          yang menghalangi z-index sidebar bersaing dengan overlay di luar grid.
+
+          Di mobile: sidebar wrapper perlu z-30 agar LEBIH TINGGI dari overlay (z-20),
+          sehingga tap pada menu benar-benar diterima sidebar, bukan overlay.
+          Di desktop (lg:): tidak perlu z-index khusus karena overlay tidak muncul.
+        */}
+        <div className="relative z-30 lg:z-auto overflow-hidden">
           <Sidebar
             open={open}
             sidebarW={sidebarW}
